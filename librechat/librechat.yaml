@@ -1,0 +1,25 @@
+version: 1.2.8
+cache: true
+
+# The TCGA analyst agent appears in LibreChat's model picker like a normal
+# provider, but every message runs the LangGraph validated-analyst pipeline.
+endpoints:
+  custom:
+    - name: "TCGA Analyst"
+      apiKey: "not-needed"
+      baseURL: "http://agent:8000/v1"
+      models:
+        default: ["tcga-analyst"]
+        fetch: false
+      titleConvo: false     # the analyst only speaks SQL; don't ask it for titles
+      modelDisplayLabel: "TCGA Analyst (validated SQL)"
+
+# Optional ClickHouse MCP (enable the `mcp` overlay). Lets LibreChat's OWN native
+# agents query ClickHouse directly, alongside the custom endpoint above.
+mcpServers:
+  clickhouse:
+    type: streamable-http
+    url: "http://clickhouse-mcp:8001/mcp"
+    # If the pinned mcp-clickhouse build uses SSE instead, switch to:
+    #   type: sse
+    #   url: "http://clickhouse-mcp:8001/sse"

@@ -1,0 +1,93 @@
+# TCGA Agentic Stack — core services.
+# Overlays: docker-compose.mcp.yml (ClickHouse MCP), docker-compose.langfuse.yml (self-hosted Langfuse).
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.12
+    container_name: tcga-clickhouse
+    environment:
+      CLICKHOUSE_DB: tcga
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+      AGENT_RO_PASSWORD: ${AGENT_RO_PASSWORD:?set AGENT_RO_PASSWORD in .env}
+    ulimits:
+      nofile: {soft: 262144, hard: 262144}
+    volumes:
+      - ./clickhouse/init:/docker-entrypoint-initdb.d:ro
+      - ch_data:/var/lib/clickhouse
+    ports: ["8123:8123", "9000:9000"]
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  tcga-ingest:
+    build: ./ingest
+    container_name: tcga-ingest
+    depends_on:
+      clickhouse: {condition: service_healthy}
+    environment:
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 8123
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
+      TCGA_PROJECTS: ${TCGA_PROJECTS:-TCGA-PAAD}
+      TCGA_MAX_MAF_FILES: ${TCGA_MAX_MAF_FILES:-3}
+      TCGA_MAX_CASES: ${TCGA_MAX_CASES:-1000}
+      TCGA_FORCE_REINGEST: ${TCGA_FORCE_REINGEST:-false}
+    restart: "no"
+
+  agent:
+    build: ./agent
+    container_name: tcga-agent
+    depends_on:
+      clickhouse: {condition: service_healthy}
+    environment:
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 8123
+      CLICKHOUSE_RO_USER: agent_ro
+      AGENT_RO_PASSWORD: ${AGENT_RO_PASSWORD}
+      AGENT_MODEL: ${AGENT_MODEL:-gpt-4o-mini}
+      AGENT_MODEL_ID: tcga-analyst
+      AGENT_LLM_API_KEY: ${AGENT_LLM_API_KEY:-sk-none}
+      AGENT_LLM_BASE_URL: ${AGENT_LLM_BASE_URL:-}
+      AGENT_MAX_SQL_ATTEMPTS: ${AGENT_MAX_SQL_ATTEMPTS:-2}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-https://cloud.langfuse.com}
+    ports: ["8000:8000"]
+
+  mongodb:
+    image: mongo:7
+    container_name: tcga-mongo
+    volumes: ["mongo_data:/data/db"]
+    restart: unless-stopped
+
+  librechat:
+    image: ghcr.io/danny-avila/librechat:latest
+    container_name: tcga-librechat
+    depends_on: [mongodb, agent]
+    ports: ["3080:3080"]
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3080
+      MONGO_URI: mongodb://mongodb:27017/LibreChat
+      CONFIG_PATH: /app/librechat.yaml
+      ENDPOINTS: custom
+      ALLOW_REGISTRATION: "true"
+      SEARCH: "false"
+      CREDS_KEY: ${CREDS_KEY}
+      CREDS_IV: ${CREDS_IV}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_BASE_URL: ${LANGFUSE_HOST:-https://cloud.langfuse.com}
+    volumes:
+      - ./librechat/librechat.yaml:/app/librechat.yaml:ro
+    restart: unless-stopped
+
+volumes:
+  ch_data:
+  mongo_data:

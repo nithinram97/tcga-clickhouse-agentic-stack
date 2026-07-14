@@ -1,0 +1,86 @@
+# Overlay: self-hosted Langfuse v3. Enable:
+#   docker compose -f docker-compose.yml -f docker-compose.langfuse.yml up -d
+# Then open http://localhost:3000, create a project, put its keys in .env
+# (LANGFUSE_PUBLIC_KEY/SECRET_KEY), set LANGFUSE_HOST=http://langfuse-web:3000,
+# and restart `agent`. (Or just use Langfuse Cloud and skip this file.)
+# Canonical reference: github.com/langfuse/langfuse/blob/main/docker-compose.yml
+services:
+  langfuse-web:
+    image: langfuse/langfuse:3
+    container_name: tcga-langfuse-web
+    depends_on: [langfuse-postgres, langfuse-clickhouse, langfuse-redis, langfuse-minio]
+    ports: ["3000:3000"]
+    environment:
+      DATABASE_URL: postgresql://postgres:${LF_POSTGRES_PASSWORD:-lfpg}@langfuse-postgres:5432/langfuse
+      SALT: "${LF_SALT:-changeme-salt}"
+      ENCRYPTION_KEY: "${LF_ENCRYPTION_KEY:?set LF_ENCRYPTION_KEY (openssl rand -hex 32)}"
+      NEXTAUTH_SECRET: "${LF_NEXTAUTH_SECRET:-changeme-nextauth}"
+      NEXTAUTH_URL: http://localhost:3000
+      CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse-clickhouse:9000
+      CLICKHOUSE_URL: http://langfuse-clickhouse:8123
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: "${LF_CLICKHOUSE_PASSWORD:-lfch}"
+      REDIS_CONNECTION_STRING: redis://langfuse-redis:6379
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: "${LF_MINIO_PASSWORD:-miniosecret}"
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      TELEMETRY_ENABLED: "false"
+    restart: unless-stopped
+  langfuse-worker:
+    image: langfuse/langfuse-worker:3
+    container_name: tcga-langfuse-worker
+    depends_on: [langfuse-postgres, langfuse-clickhouse, langfuse-redis, langfuse-minio]
+    environment:
+      DATABASE_URL: postgresql://postgres:${LF_POSTGRES_PASSWORD:-lfpg}@langfuse-postgres:5432/langfuse
+      SALT: "${LF_SALT:-changeme-salt}"
+      ENCRYPTION_KEY: "${LF_ENCRYPTION_KEY}"
+      CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse-clickhouse:9000
+      CLICKHOUSE_URL: http://langfuse-clickhouse:8123
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: "${LF_CLICKHOUSE_PASSWORD:-lfch}"
+      REDIS_CONNECTION_STRING: redis://langfuse-redis:6379
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: "${LF_MINIO_PASSWORD:-miniosecret}"
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+    restart: unless-stopped
+  langfuse-postgres:
+    image: postgres:16
+    container_name: tcga-langfuse-postgres
+    environment:
+      POSTGRES_PASSWORD: "${LF_POSTGRES_PASSWORD:-lfpg}"
+      POSTGRES_DB: langfuse
+    volumes: ["lf_pg:/var/lib/postgresql/data"]
+    restart: unless-stopped
+  langfuse-clickhouse:
+    image: clickhouse/clickhouse-server:24.12
+    container_name: tcga-langfuse-clickhouse
+    environment:
+      CLICKHOUSE_PASSWORD: "${LF_CLICKHOUSE_PASSWORD:-lfch}"
+    ulimits:
+      nofile: {soft: 262144, hard: 262144}
+    volumes: ["lf_ch:/var/lib/clickhouse"]
+    restart: unless-stopped
+  langfuse-redis:
+    image: redis:7
+    container_name: tcga-langfuse-redis
+    restart: unless-stopped
+  langfuse-minio:
+    image: minio/minio
+    container_name: tcga-langfuse-minio
+    entrypoint: sh
+    command: -c 'mkdir -p /data/langfuse && minio server /data --console-address ":9001"'
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: "${LF_MINIO_PASSWORD:-miniosecret}"
+    volumes: ["lf_minio:/data"]
+    restart: unless-stopped
+volumes:
+  lf_pg:
+  lf_ch:
+  lf_minio:

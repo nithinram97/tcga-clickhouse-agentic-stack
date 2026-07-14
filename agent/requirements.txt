@@ -1,0 +1,8 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+clickhouse-connect==0.8.15
+langchain-core==0.3.29
+langchain-openai==0.2.14
+langgraph==0.2.61
+langfuse==3.0.3
