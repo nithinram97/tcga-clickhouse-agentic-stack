@@ -4,9 +4,19 @@ import { createPublicOauthClient } from "@osdk/oauth";
 /**
  * Foundry client and sign-in.
  *
- * createPublicOauthClient runs the auth flow in the BROWSER, as the signed-in
- * user, so every query carries that user's own permissions and Foundry's
- * row-level security keeps applying.
+ * Matches the call signature in your generated SimpleReactComponent example:
+ *
+ *   createPublicOauthClient(
+ *     clientId, url, redirectUrl,
+ *     true,                        // useHistory
+ *     undefined,                   // loginPage
+ *     window.location.toString(),  // where to return after login
+ *     scopes
+ *   );
+ *
+ * The arguments are POSITIONAL, not an options object — passing `{ scopes }` as
+ * the fourth argument silently lands in the `useHistory` slot and the scopes
+ * never reach the authorize request.
  */
 
 const FOUNDRY_URL = import.meta.env.VITE_FOUNDRY_URL;
@@ -15,16 +25,24 @@ const ONTOLOGY_RID = import.meta.env.VITE_FOUNDRY_ONTOLOGY_RID;
 const REDIRECT_URL =
   import.meta.env.VITE_FOUNDRY_REDIRECT_URL || `${window.location.origin}/auth/callback`;
 
-const SCOPES = (import.meta.env.VITE_FOUNDRY_SCOPES ||
-  "api:ontologies-read api:ontologies-write")
+/**
+ * Scope names are `api:use-*`, per your Developer Console snippet — not
+ * `api:ontologies-read`. A wrong scope name makes the authorize request fail
+ * before it ever reaches the callback, which is exactly what produces a return
+ * with no usable parameters.
+ *
+ * Grant these in Developer Console → your application → OAuth & scopes:
+ *   api:use-ontologies-read    reading object types, aggregations
+ *   api:use-ontologies-write   the Create/Update/Delete Dashboard Actions
+ *   api:use-admin-read         resolving the current user for `user`
+ */
+const SCOPES = (
+  import.meta.env.VITE_FOUNDRY_SCOPES ||
+  "api:use-ontologies-read api:use-ontologies-write api:use-admin-read"
+)
   .split(/\s+/)
   .filter(Boolean);
 
-/**
- * Fail on missing config with a readable message. A blank VITE_FOUNDRY_URL
- * otherwise surfaces much later as an obscure OAuth error, which is a miserable
- * thing to debug.
- */
 function requireEnv() {
   const missing = Object.entries({
     VITE_FOUNDRY_URL: FOUNDRY_URL,
@@ -37,46 +55,48 @@ function requireEnv() {
   if (missing.length) {
     throw new Error(
       `Missing environment variables: ${missing.join(", ")}. ` +
-        `Copy .env.example to .env and fill it from Developer Console, then restart the dev server ` +
-        `(Vite only reads .env at startup).`
+        `Copy .env.example to .env, fill it from Developer Console, then restart the dev server ` +
+        `— Vite only reads .env at startup.`
     );
   }
 }
 
 requireEnv();
 
-export const auth = createPublicOauthClient(CLIENT_ID, FOUNDRY_URL, REDIRECT_URL, {
-  scopes: SCOPES
-});
+export const auth = createPublicOauthClient(
+  CLIENT_ID,
+  FOUNDRY_URL,
+  REDIRECT_URL,
+  true,                       // useHistory — keeps the callback out of the back stack
+  undefined,                  // loginPage — we have no separate login screen
+  window.location.toString(), // return here once signed in
+  SCOPES
+);
 
 export const client = createClient(FOUNDRY_URL, ONTOLOGY_RID, auth);
 
-/** The path portion of the redirect URL, e.g. "/auth/callback". */
+/**
+ * The path part of the redirect URL. Your example serves the app under a base
+ * path — "/skywise-perfo-dynamic-lp/auth/callback" — so this is derived rather
+ * than hardcoded to "/auth/callback".
+ */
 const CALLBACK_PATH = new URL(REDIRECT_URL, window.location.origin).pathname;
 
 /**
  * Removes any half-finished OAuth flow from storage.
  *
- * This is the fix for `OperationProcessingError: response parameter "state"
- * missing`. The library stores a state and PKCE verifier before redirecting to
- * Foundry. If that flow never completes — the tab was closed, the redirect URI
- * did not match, Foundry returned an error — the stored state survives. On the
- * next load the library sees a pending state, treats the current URL as the
- * callback, finds no `state` query parameter, and throws. It then throws again
- * on every subsequent load, because nothing ever clears the stale entry.
- *
- * Wiping it and retrying once turns a permanent dead end into one extra
- * redirect.
+ * The library stores a state and PKCE verifier before redirecting to Foundry. If
+ * that flow never completes, the stored entry survives; on the next load the
+ * library sees a pending state, treats the current URL as the callback, finds no
+ * `state` parameter and throws — and keeps throwing, because nothing clears it.
  */
 function clearStaleAuthState() {
   const looksLikeAuth = (k) => /osdk|oauth|pkce|code_verifier|auth[_-]?state|token/i.test(k);
   for (const store of [window.localStorage, window.sessionStorage]) {
     try {
-      Object.keys(store)
-        .filter(looksLikeAuth)
-        .forEach((k) => store.removeItem(k));
+      Object.keys(store).filter(looksLikeAuth).forEach((k) => store.removeItem(k));
     } catch {
-      /* storage unavailable — nothing to clear */
+      /* storage unavailable */
     }
   }
 }
@@ -91,11 +111,7 @@ const isStateError = (e) => {
   );
 };
 
-/**
- * Completes sign-in, then returns.
- *
- * Call this once before rendering. It redirects to Foundry and back if needed.
- */
+/** Call once before rendering. Redirects to Foundry and back if needed. */
 export async function ensureSignedIn() {
   const onCallback = window.location.pathname === CALLBACK_PATH;
 
@@ -104,8 +120,6 @@ export async function ensureSignedIn() {
   } catch (e) {
     if (!isStateError(e)) throw e;
 
-    // Second attempt from a clean slate. Strip any leftover query string so the
-    // library cannot mistake this load for a callback.
     console.warn("Stale OAuth state detected; clearing it and restarting sign-in.", e);
     clearStaleAuthState();
     window.history.replaceState({}, "", window.location.pathname);
@@ -115,18 +129,17 @@ export async function ensureSignedIn() {
     } catch (again) {
       throw new Error(
         `Sign-in failed after clearing stored OAuth state: ${again.message ?? again}\n\n` +
-          `The usual cause is a redirect URI mismatch. The value this app sends is:\n` +
-          `  ${REDIRECT_URL}\n` +
-          `It must be registered EXACTLY — scheme, host, port and path — under your ` +
-          `application's OAuth settings in Developer Console.`
+          `Redirect URI this app sent:\n  ${REDIRECT_URL}\n` +
+          `Scopes requested:\n  ${SCOPES.join(" ")}\n\n` +
+          `Both must match your application's OAuth settings in Developer Console exactly.`
       );
     }
   }
 
-  // Land back on the app rather than leaving ?code=…&state=… in the address bar,
-  // where a refresh would try to redeem an already-used code.
+  // Don't leave ?code=…&state=… in the address bar — a refresh would try to
+  // redeem an already-used code and fail confusingly.
   if (onCallback) {
-    const back = sessionStorage.getItem("postLoginPath") || "/";
+    const back = sessionStorage.getItem("postLoginPath") || import.meta.env.BASE_URL || "/";
     sessionStorage.removeItem("postLoginPath");
     window.history.replaceState({}, "", back);
   } else if (window.location.search.includes("code=")) {
@@ -141,8 +154,8 @@ export function rememberReturnPath() {
   }
 }
 
-/** Exposed for a "sign out" control, and useful from the console while debugging. */
+/** For a sign-out control, and handy from the console while debugging. */
 export function resetAuth() {
   clearStaleAuthState();
-  window.location.replace("/");
+  window.location.replace(import.meta.env.BASE_URL || "/");
 }
