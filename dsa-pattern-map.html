@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DSA Pattern Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E4E8ED;
+  --card:#FFFFFF;
+  --ink:#14202B;
+  --ink-2:#3D4E5D;
+  --muted:#6B7C8B;
+  --rule:#C9D2DB;
+  --key:#B62230;
+  --key-soft:#FBE9EA;
+  --focus:#1A73A8;
+  --r:3px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif;
+  font-size:15px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+code,pre,.mono{font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace}
+
+/* ---------- masthead ---------- */
+.mast{
+  padding:26px 18px 18px;
+  border-bottom:2px solid var(--ink);
+  background:var(--card);
+}
+.mast-in{max-width:1180px;margin:0 auto}
+h1{
+  font-size:clamp(28px,6.5vw,46px);
+  font-weight:700;
+  letter-spacing:-0.028em;
+  line-height:1.02;
+  margin:0 0 10px;
+  max-width:14ch;
+}
+.lede{
+  margin:0;
+  max-width:62ch;
+  color:var(--ink-2);
+  font-size:15.5px;
+}
+.counts{
+  display:flex;
+  flex-wrap:wrap;
+  gap:0;
+  margin:18px 0 0;
+  border-top:1px solid var(--rule);
+}
+.count{
+  padding:10px 20px 8px 0;
+  margin-right:20px;
+  border-right:1px solid var(--rule);
+  padding-right:20px;
+}
+.count:last-child{border-right:0}
+.count b{display:block;font-size:24px;font-weight:700;letter-spacing:-0.02em;line-height:1.1}
+.count span{font-size:12.5px;color:var(--muted)}
+
+/* ---------- controls ---------- */
+.controls{
+  position:sticky;top:0;z-index:30;
+  background:var(--paper);
+  border-bottom:1px solid var(--rule);
+  padding:9px 18px;
+}
+.controls-in{
+  max-width:1180px;margin:0 auto;
+  display:flex;gap:7px;flex-wrap:wrap;align-items:center;
+}
+button{font:inherit;cursor:pointer}
+.chip{
+  border:1px solid var(--rule);
+  background:var(--card);
+  color:var(--ink-2);
+  padding:5px 11px;
+  border-radius:100px;
+  font-size:13px;
+  font-weight:500;
+}
+.chip:hover{border-color:var(--ink-2)}
+.chip[aria-pressed="true"]{
+  background:var(--ink);border-color:var(--ink);color:#fff;
+}
+.chip.key[aria-pressed="true"]{background:var(--key);border-color:var(--key)}
+.spacer{flex:1}
+.txtbtn{
+  background:none;border:0;color:var(--muted);
+  font-size:12.5px;text-decoration:underline;
+  text-underline-offset:3px;padding:5px 2px;
+}
+.txtbtn:hover{color:var(--ink)}
+
+/* ---------- layout ---------- */
+.wrap{
+  max-width:1180px;margin:0 auto;padding:16px 18px 90px;
+  display:grid;grid-template-columns:1fr;gap:22px;
+}
+@media(min-width:1000px){
+  .wrap{grid-template-columns:minmax(0,1fr) 400px;align-items:start}
+}
+
+/* ---------- the map ---------- */
+.group{
+  background:var(--card);
+  border:1px solid var(--rule);
+  margin-bottom:9px;
+  position:relative;
+  overflow:hidden;
+}
+.group::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:5px;
+  background:var(--line);
+}
+.ghead{
+  width:100%;
+  display:flex;align-items:baseline;gap:10px;
+  background:none;border:0;
+  padding:12px 14px 12px 19px;
+  text-align:left;
+}
+.ghead:hover{background:#F4F7F9}
+.gname{font-weight:600;font-size:16.5px;letter-spacing:-0.015em}
+.gmeta{font-size:12px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.caret{
+  color:var(--muted);font-size:11px;width:11px;flex:none;
+  transition:transform .16s ease;
+}
+.group[data-open="false"] .caret{transform:rotate(-90deg)}
+.group[data-open="false"] .glist{display:none}
+.glist{border-top:1px solid var(--rule)}
+
+.pat{border-bottom:1px solid #EDF1F4;padding-left:19px}
+.pat:last-child{border-bottom:0}
+.prow{display:flex;align-items:center;gap:8px;padding:1px 0}
+.pbtn{
+  flex:1;min-width:0;
+  background:none;border:0;text-align:left;
+  padding:10px 6px 10px 0;
+  display:flex;align-items:center;gap:9px;
+  color:var(--ink);
+}
+.pbtn:hover .pname{text-decoration:underline;text-underline-offset:2px}
+.pname{font-size:14.5px;font-weight:500;flex:1;min-width:0}
+.pat[data-sel="true"]{background:#F0F5F8}
+.pat[data-sel="true"] .pname{font-weight:600}
+.keydot{
+  flex:none;width:7px;height:7px;border-radius:50%;
+  background:var(--key);
+}
+.keyslot{flex:none;width:7px}
+.freq{display:flex;gap:2px;flex:none;align-items:center}
+.freq i{width:4px;height:12px;background:var(--rule);border-radius:1px;display:block}
+.freq i.on{background:var(--ink-2)}
+.pat.k .freq i.on{background:var(--key)}
+.vtog{
+  flex:none;background:none;border:0;color:var(--muted);
+  font-size:11px;padding:8px 12px 8px 6px;
+}
+.vtog:hover{color:var(--ink)}
+.vtog[hidden]{display:none}
+.vars{
+  list-style:none;margin:0 0 10px;padding:0 12px 0 0;
+  border-left:1px dashed var(--rule);margin-left:3px;padding-left:14px;
+}
+.vars li{
+  font-size:13.5px;color:var(--ink-2);
+  padding:5px 0;display:flex;gap:9px;align-items:flex-start;
+}
+.vars .vn{flex:1}
+.vars .vnote{display:block;color:var(--muted);font-size:12.5px}
+.pat[data-vopen="false"] .vars{display:none}
+
+/* ---------- detail ---------- */
+.detail{
+  background:var(--card);
+  border:1px solid var(--rule);
+}
+@media(min-width:1000px){
+  .detail{position:sticky;top:62px;max-height:calc(100vh - 84px);overflow:auto}
+}
+@media(max-width:999px){
+  .detail{
+    position:fixed;left:0;right:0;bottom:0;z-index:60;
+    max-height:78vh;overflow:auto;
+    border:0;border-top:2px solid var(--ink);
+    box-shadow:0 -14px 34px rgba(20,32,43,.16);
+    transform:translateY(101%);
+    transition:transform .22s cubic-bezier(.3,.7,.3,1);
+  }
+  .detail.open{transform:translateY(0)}
+}
+.dhead{
+  padding:16px 18px 13px;
+  border-bottom:1px solid var(--rule);
+  position:sticky;top:0;background:var(--card);z-index:2;
+}
+.dclose{
+  position:absolute;right:10px;top:12px;
+  border:1px solid var(--rule);background:var(--card);
+  width:30px;height:30px;border-radius:50%;color:var(--ink-2);font-size:15px;
+}
+@media(min-width:1000px){.dclose{display:none}}
+.dpath{font-size:12px;color:var(--muted);margin-bottom:5px;padding-right:36px}
+.dname{font-size:21px;font-weight:700;letter-spacing:-0.02em;line-height:1.15;padding-right:36px}
+.dtags{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.tag{
+  font-size:11.5px;border:1px solid var(--rule);
+  padding:2px 7px;border-radius:100px;color:var(--ink-2);
+}
+.tag.k{background:var(--key-soft);border-color:#F0C9CC;color:var(--key);font-weight:600}
+.dbody{padding:4px 18px 26px}
+.sec{padding:15px 0;border-bottom:1px solid #EDF1F4}
+.sec:last-child{border-bottom:0}
+.sec h3{
+  margin:0 0 6px;font-size:12.5px;font-weight:600;
+  color:var(--muted);letter-spacing:0.01em;
+}
+.sec p{margin:0;font-size:14.5px;max-width:58ch}
+.sec p.anti{color:var(--ink-2)}
+pre{
+  margin:0;background:#101A24;color:#D8E2EA;
+  padding:12px 13px;border-radius:var(--r);
+  font-size:12.3px;line-height:1.62;
+  overflow-x:auto;white-space:pre;
+}
+.ulist{margin:0;padding-left:17px;font-size:14px;color:var(--ink-2)}
+.ulist li{margin-bottom:4px}
+.freqline{display:flex;align-items:center;gap:10px}
+.freqline .lab{font-size:14px}
+.empty{padding:34px 20px;color:var(--muted);font-size:14.5px;max-width:40ch}
+
+/* ---------- modifiers ---------- */
+.mods{margin-top:26px;background:var(--card);border:1px solid var(--rule);padding:18px}
+.mods h2{margin:0 0 4px;font-size:19px;font-weight:700;letter-spacing:-0.02em}
+.mods > p{margin:0 0 14px;color:var(--ink-2);font-size:14.5px;max-width:64ch}
+.axis{
+  display:grid;grid-template-columns:1fr;gap:2px;
+  padding:9px 0;border-top:1px solid #EDF1F4;
+}
+@media(min-width:620px){.axis{grid-template-columns:210px 1fr;gap:16px}}
+.axis .an{font-weight:500;font-size:14px}
+.axis .ad{font-size:13.5px;color:var(--muted)}
+.foot{max-width:1180px;margin:0 auto;padding:0 18px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="mast">
+  <div class="mast-in">
+    <h1>The interview graph, as a map</h1>
+    <p class="lede">Paradigms are lines. Patterns are stations. Keystone stations are interchanges — learn one and several other lines become reachable without separate study. Frequency bars show how often a station shows up in real interview loops.</p>
+    <div class="counts">
+      <div class="count"><b id="cP">0</b><span>paradigms</span></div>
+      <div class="count"><b id="cN">0</b><span>patterns</span></div>
+      <div class="count"><b id="cV">0</b><span>variants</span></div>
+      <div class="count"><b id="cK" style="color:var(--key)">0</b><span>keystones</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="controls-in">
+    <button class="chip key" id="fKey" aria-pressed="false">Keystones only</button>
+    <button class="chip" id="fHigh" aria-pressed="false">Frequency 4+</button>
+    <span class="spacer"></span>
+    <button class="txtbtn" id="expand">Expand all</button>
+    <button class="txtbtn" id="collapse">Collapse all</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div>
+    <div id="map"></div>
+    <section class="mods">
+      <h2>Modifier axes</h2>
+      <p>These are not levels in the tree. They are toggles applied on top of any pattern, and they generate most of what looks like a brand-new problem. When a question feels unfamiliar, check whether it is a station you know with two or three of these flipped.</p>
+      <div id="axes"></div>
+    </section>
+  </div>
+  <aside class="detail" id="detail" aria-live="polite">
+    <div class="empty" id="empty">Pick a station to see its invariant, its recognition trigger, the lookalike that fools people, and the template.</div>
+    <div id="dcontent" hidden></div>
+  </aside>
+</div>
+
+<p class="foot">Frequency is a judgement call from typical product-company loops, on a 1–5 scale: 5 near-certain, 4 very common, 3 common, 2 occasional, 1 rare or specialist.</p>
+
+<script>
+const D=[
+{id:"tp",name:"Two pointers",line:"#0F6E9C",pats:[
+ {id:"tp1",name:"Converging pointers on a sorted sequence",f:5,k:true,
+  sub:["array","string"],
+  inv:"Everything outside [l, r] is already decided. Each move permanently discards a candidate that can never be optimal.",
+  trig:"Input is sorted (or can be sorted) and you need a pair or a boundary satisfying a monotone condition.",
+  anti:"If the condition is not monotone in the direction you move, discarding is unsound — you need hashing or a heap instead.",
+  tmpl:"l, r = 0, n-1\nwhile l < r:\n    v = f(a[l], a[r])\n    if v == target: return (l, r)\n    if v < target: l += 1      # only l can improve\n    else:          r -= 1",
+  unl:["Sort + two pointers (3Sum family)","Palindrome checks","Container/trapping-water framing"],
+  vars:[{n:"Two Sum on sorted input",f:4},{n:"3Sum / 4Sum via fixed outer loop",f:4,note:"outer loop + inner two pointers; skip duplicates at each level"},{n:"Container With Most Water",f:3,note:"move the shorter wall — the taller one can never be improved by staying"},{n:"Valid palindrome, with k deletions",f:3},{n:"Trapping rain water",f:3,note:"maintain leftMax/rightMax as you converge"}]},
+ {id:"tp2",name:"Fast/slow read-write pointer",f:4,k:false,
+  sub:["array","linked list"],
+  inv:"[0, write) holds the finished answer at all times; read scans ahead and never revisits.",
+  trig:"In-place compaction, partitioning, or dedupe with O(1) extra space.",
+  anti:"If order must be preserved AND elements can move backwards, in-place fails — allocate.",
+  tmpl:"write = 0\nfor read in range(n):\n    if keep(a[read]):\n        a[write] = a[read]\n        write += 1\nreturn write",
+  unl:["Dutch national flag","Move zeroes","Remove duplicates in place"],
+  vars:[{n:"Remove duplicates from sorted array (allow k copies)",f:3},{n:"Dutch national flag / 3-way partition",f:3,note:"three pointers; the mid pointer does not advance after a swap with high"},{n:"Move zeroes / partition by predicate",f:3},{n:"Merge sorted array in place from the back",f:3,note:"write backwards to avoid overwriting unread data"}]},
+ {id:"tp3",name:"Floyd cycle detection",f:3,k:false,
+  sub:["linked list","functional graph"],
+  inv:"Slow advances 1, fast advances 2. If a cycle exists they must meet inside it; distance from meeting point to entry equals distance from head to entry.",
+  trig:"Implicit successor function with no extra memory allowed, or 'find the duplicate without modifying the array'.",
+  anti:"With a hash set allowed, just use the set — it is clearer and equally fast.",
+  tmpl:"slow = fast = head\nwhile fast and fast.next:\n    slow, fast = slow.next, fast.next.next\n    if slow is fast: break\nelse: return None\nslow = head\nwhile slow is not fast:\n    slow, fast = slow.next, fast.next\nreturn slow",
+  unl:["Find the duplicate number","Happy number","Linked list midpoint"],
+  vars:[{n:"Cycle entry point",f:3},{n:"Find duplicate number (array as functional graph)",f:3,note:"the cleverest disguise of this pattern"},{n:"Middle of list / nth from end",f:3},{n:"Palindrome linked list",f:2,note:"midpoint + reverse second half"}]}
+]},
+
+{id:"sw",name:"Sliding window",line:"#B0631C",pats:[
+ {id:"sw1",name:"Variable window, shrink while invalid",f:5,k:true,
+  sub:["array","string"],
+  inv:"After the inner shrink loop, [l, r] is always valid. Every index enters and leaves at most once, so the double loop is linear.",
+  trig:"Longest/shortest contiguous run under a constraint, where extending can only break validity and shrinking can only restore it.",
+  anti:"Breaks the moment negative numbers make 'extend hurts, shrink helps' false. That is exactly where prefix-sum + hashmap takes over.",
+  tmpl:"l = 0; best = 0\nfor r in range(n):\n    add(a[r])\n    while not valid():\n        remove(a[l]); l += 1\n    best = max(best, r - l + 1)",
+  unl:["At-most-K / exactly-K counting","Minimum window substring","Fixed-size windows as a trivial case"],
+  vars:[{n:"Longest substring without repeating characters",f:5},{n:"Longest with at most K distinct",f:4},{n:"Exactly K distinct = atMost(K) - atMost(K-1)",f:3,note:"the single highest-leverage trick in this family"},{n:"Minimum window substring (shrink to minimise, not maximise)",f:4,note:"track best inside the shrink loop instead of after it"},{n:"Count of valid subarrays (add r-l+1 per step)",f:3},{n:"Shrink-once variant for max-length only",f:2,note:"window never shrinks below best; if-instead-of-while"}]},
+ {id:"sw2",name:"Fixed-size window",f:3,k:false,
+  sub:["array","string"],
+  inv:"Window size is constant; each step adds one element and removes exactly one.",
+  trig:"The problem hands you the window length k.",
+  anti:"If k is what you are solving for, this is the variable-window pattern wearing a disguise.",
+  tmpl:"for r in range(n):\n    add(a[r])\n    if r >= k: remove(a[r-k])\n    if r >= k-1: record()",
+  unl:["Anagram / permutation in string","Max average subarray"],
+  vars:[{n:"Find all anagrams / permutation in string",f:4,note:"compare count vectors, or keep a matches counter"},{n:"Maximum average subarray",f:2},{n:"Sliding window with hash of contents (rolling hash)",f:2}]},
+ {id:"sw3",name:"Window with monotonic deque",f:3,k:false,
+  sub:["array"],
+  inv:"Deque holds indices in decreasing value order; the front is always the window maximum.",
+  trig:"You need min or max of every window, not a sum or count.",
+  anti:"A heap works but needs lazy deletion; the deque is the clean answer when the window is contiguous.",
+  tmpl:"dq = deque()\nfor r in range(n):\n    while dq and a[dq[-1]] <= a[r]: dq.pop()\n    dq.append(r)\n    if dq[0] <= r - k: dq.popleft()\n    if r >= k-1: out.append(a[dq[0]])",
+  unl:["Monotonic stack intuition","Shortest subarray with sum >= K"],
+  vars:[{n:"Sliding window maximum",f:4},{n:"Longest subarray with max-min <= limit",f:3,note:"two deques, one for max one for min"},{n:"Shortest subarray with sum at least K (negatives allowed)",f:2,note:"monotonic deque over prefix sums"}]}
+]},
+
+{id:"pf",name:"Prefix and difference arrays",line:"#1E7A5E",pats:[
+ {id:"pf1",name:"Prefix aggregate + hashmap of seen states",f:5,k:true,
+  sub:["array","tree","string"],
+  inv:"Any subarray value = P[r] combined with the inverse of P[l-1]. Storing every P seen so far turns 'find a subarray' into 'find a complement', which is O(1).",
+  trig:"Contiguous subarray with an exact target, especially with negative numbers or zeroes present.",
+  anti:"If you only need the longest/shortest under an inequality with all-positive values, sliding window is simpler and O(1) space.",
+  tmpl:"seen = {0: -1}   # or {0: 1} when counting\nrun = 0\nfor i, x in enumerate(a):\n    run += x\n    if run - target in seen:\n        record(i - seen[run-target])\n    seen.setdefault(run, i)",
+  unl:["Subarray sum equals K","Prefix XOR","Divisible-by-K counting","Path sum III on trees"],
+  vars:[{n:"Subarray sum equals K (count)",f:5},{n:"Longest subarray with sum K",f:4,note:"store first occurrence only"},{n:"Prefix XOR: subarrays with XOR = K",f:3},{n:"Count subarrays divisible by K",f:3,note:"key on run % K, mind negative modulo"},{n:"Binary array: equal 0s and 1s",f:3,note:"map 0 to -1 and reduce to sum = 0"},{n:"Path sum III (prefix map along a root-to-node path)",f:3,note:"same pattern, backtracked on a tree"}]},
+ {id:"pf2",name:"Difference array / range stamping",f:3,k:false,
+  sub:["array","intervals"],
+  inv:"Add +v at start and -v at end+1; a prefix pass reconstructs all range updates in one sweep.",
+  trig:"Many range updates, one final read.",
+  anti:"If updates and queries interleave, you need a BIT or segment tree instead.",
+  tmpl:"d = [0]*(n+1)\nfor s, e, v in ops:\n    d[s] += v; d[e+1] -= v\nrun = 0\nfor i in range(n):\n    run += d[i]; a[i] = run",
+  unl:["Line sweep on intervals","Car pooling / meeting rooms by counting"],
+  vars:[{n:"Range addition, single final read",f:3},{n:"Car pooling / booking feasibility",f:3},{n:"Corporate flight bookings",f:2},{n:"Coordinate-compressed difference array",f:2,note:"when the index space is huge but sparse"}]},
+ {id:"pf3",name:"2D prefix sum",f:2,k:false,
+  sub:["grid"],
+  inv:"Inclusion–exclusion: rect = P[r2][c2] - P[r1-1][c2] - P[r2][c1-1] + P[r1-1][c1-1].",
+  trig:"Repeated rectangle-sum queries on a static matrix.",
+  anti:"Single query only? Just sum it directly.",
+  tmpl:"P[i+1][j+1] = g[i][j] + P[i][j+1] + P[i+1][j] - P[i][j]",
+  unl:["Max sum rectangle (compress rows, then 1D prefix)"],
+  vars:[{n:"Immutable range sum 2D",f:2},{n:"Max sum rectangle no larger than K",f:1,note:"row compression + sorted prefix search"},{n:"Count submatrices summing to target",f:2,note:"row-pair compression reduces it to the 1D hashmap pattern"}]}
+]},
+
+{id:"bs",name:"Binary search",line:"#5B3FA8",pats:[
+ {id:"bs1",name:"Predicate boundary search",f:5,k:true,
+  sub:["array","answer space"],
+  inv:"A monotone predicate splits the range into FFFF|TTTT. You are always searching for the first T, never for an equal value.",
+  trig:"Anything sorted, plus every 'find leftmost/rightmost' question. Writing it as a predicate kills all off-by-one debates.",
+  anti:"If no monotone predicate exists — the array is genuinely unordered on your condition — binary search is not applicable however sorted it looks.",
+  tmpl:"lo, hi = 0, n          # hi is exclusive\nwhile lo < hi:\n    mid = (lo + hi) // 2\n    if ok(mid): hi = mid   # first T is at mid or left\n    else:       lo = mid+1\nreturn lo                 # == n if no T exists",
+  unl:["Search insert position","First/last occurrence","Binary search on answer","LIS in n log n"],
+  vars:[{n:"lower_bound / upper_bound",f:5},{n:"First and last position of an element",f:4},{n:"Search insert position",f:3},{n:"Peak element (local property, no global sort)",f:3,note:"proof of a peak comes from the boundary, not from ordering"},{n:"Search in rotated sorted array",f:4,note:"one half is always sorted — decide which, then test membership"},{n:"Find minimum in rotated array, with duplicates",f:3,note:"duplicates degrade to O(n) worst case"}]},
+ {id:"bs2",name:"Binary search on the answer",f:4,k:true,
+  sub:["answer space"],
+  inv:"Feasibility is monotone in the candidate answer: if x works, everything larger (or smaller) works too. You binary search the value, not the index.",
+  trig:"'Minimise the maximum', 'maximise the minimum', 'smallest capacity/speed/time such that…'.",
+  anti:"If feasibility flips back and forth as the candidate grows, you cannot bisect — that is an optimisation or DP problem.",
+  tmpl:"lo, hi = min_possible, max_possible\nwhile lo < hi:\n    mid = (lo + hi) // 2\n    if feasible(mid): hi = mid\n    else:             lo = mid + 1\nreturn lo",
+  unl:["Split array largest sum","Koko eating bananas","Ship packages in D days","Aggressive cows / magnetic force"],
+  vars:[{n:"Koko eating bananas / minimum speed",f:4},{n:"Split array into m parts, minimise largest sum",f:3,note:"greedy feasibility check inside"},{n:"Capacity to ship packages in D days",f:3},{n:"Maximise minimum distance (aggressive cows)",f:3},{n:"Median of two sorted arrays (partition search)",f:2,note:"binary search the split point, not the value"},{n:"Binary search on reals with epsilon bound",f:1}]}
+]},
+
+{id:"hs",name:"Hashing and counting",line:"#8A6D12",pats:[
+ {id:"hs1",name:"Complement lookup",f:4,k:false,
+  sub:["array"],
+  inv:"For each element, the thing that completes it is computable in O(1) and may already be in the map.",
+  trig:"Unsorted input, need a pair, order does not matter.",
+  anti:"If you need all pairs without duplicates, sorting plus two pointers handles dedupe far more cleanly.",
+  tmpl:"seen = {}\nfor i, x in enumerate(a):\n    if target - x in seen: return (seen[target-x], i)\n    seen[x] = i",
+  unl:["Two Sum","Pair with given difference","Subarray complement patterns"],
+  vars:[{n:"Two Sum unsorted",f:5},{n:"Pairs with given difference",f:2},{n:"Count pairs summing to k",f:2}]},
+ {id:"hs2",name:"Canonical key grouping",f:3,k:false,
+  sub:["string","array"],
+  inv:"Two items belong together exactly when their canonical form is identical. Choose a form that is cheap and collision-free.",
+  trig:"'Group all the …' or 'find items that are equivalent under some transformation'.",
+  anti:"If equivalence is not transitive, grouping by key is wrong — you need union-find or a graph.",
+  tmpl:"groups = defaultdict(list)\nfor s in items:\n    groups[canon(s)].append(s)",
+  unl:["Group anagrams","Isomorphic strings","Grouping shifted sequences"],
+  vars:[{n:"Group anagrams (sorted string or 26-count tuple as key)",f:4},{n:"Isomorphic strings / word pattern",f:3,note:"canonical form = first-occurrence index encoding"},{n:"Group shifted strings",f:2},{n:"Grouping by normalised shape (islands, stones)",f:2}]},
+ {id:"hs3",name:"Frequency map and its derivatives",f:4,k:false,
+  sub:["array","string"],
+  inv:"Counting collapses order away. Anything invariant to order can be answered from counts alone.",
+  trig:"Majority, duplicates, top-k by count, character balance.",
+  anti:"If order matters (subsequence, first unique position), the count map alone is insufficient.",
+  tmpl:"cnt = Counter(a)\n# then: bucket sort by count, or heap of size k, or scan",
+  unl:["Top K frequent (heap or bucket)","Majority element","First unique character"],
+  vars:[{n:"Top K frequent elements (bucket sort by count)",f:4,note:"O(n) beats the heap here since counts are bounded by n"},{n:"Majority element (Boyer–Moore voting)",f:3,note:"O(1) space; the vote invariant is the interesting part"},{n:"First unique character",f:2},{n:"Valid anagram / ransom note",f:2}]}
+]},
+
+{id:"iv",name:"Intervals and sweep line",line:"#A63A5E",pats:[
+ {id:"iv1",name:"Sort by start, then merge or compare",f:4,k:true,
+  sub:["intervals"],
+  inv:"After sorting by start, only the previous kept interval can overlap the current one. All earlier ones are already resolved.",
+  trig:"Any problem stated as ranges: merge, insert, overlap, conflict.",
+  anti:"For 'maximum concurrent' you want the event sweep instead — merging tells you where, not how many.",
+  tmpl:"a.sort(key=lambda x: x[0])\nout = [a[0]]\nfor s, e in a[1:]:\n    if s <= out[-1][1]: out[-1][1] = max(out[-1][1], e)\n    else: out.append([s, e])",
+  unl:["Merge intervals","Insert interval","Interval intersection","Non-overlapping removal"],
+  vars:[{n:"Merge intervals",f:5},{n:"Insert interval into a sorted list",f:3},{n:"Interval list intersections (two-pointer over two lists)",f:3},{n:"Can attend all meetings",f:2},{n:"Employee free time",f:2}]},
+ {id:"iv2",name:"Event sweep (+1 / -1 chronology)",f:3,k:false,
+  sub:["intervals","timeline"],
+  inv:"Flatten every interval into two timestamped events. Sweeping in time order, a running counter is the exact concurrency at that instant.",
+  trig:"'How many at once', 'minimum rooms/platforms/servers'.",
+  anti:"Ties matter — an end at t and a start at t usually should not both count; sort ends before starts.",
+  tmpl:"ev = [(s, +1) for s,_ in a] + [(e, -1) for _,e in a]\nev.sort()          # -1 sorts before +1 at equal time\ncur = best = 0\nfor t, delta in ev:\n    cur += delta; best = max(best, cur)",
+  unl:["Meeting rooms II","Skyline problem","Car pooling"],
+  vars:[{n:"Meeting rooms II (min rooms)",f:4,note:"also solvable with a min-heap of end times"},{n:"The skyline problem",f:2,note:"sweep plus a multiset of active heights"},{n:"Maximum population year / interval counting",f:2},{n:"My calendar I/II/III (booking with overlap limits)",f:2}]},
+ {id:"iv3",name:"Sort by end for greedy selection",f:3,k:true,
+  sub:["intervals"],
+  inv:"Exchange argument: taking the interval that finishes earliest never hurts, because any solution using a later-finishing one can be swapped without losing count.",
+  trig:"'Maximum non-overlapping', 'minimum removals', 'fewest arrows'.",
+  anti:"Sorting by start here gives the wrong answer — a common and quiet bug.",
+  tmpl:"a.sort(key=lambda x: x[1])\nend = -inf; taken = 0\nfor s, e in a:\n    if s >= end: taken += 1; end = e",
+  unl:["Non-overlapping intervals","Burst balloons with arrows","Activity selection"],
+  vars:[{n:"Non-overlapping intervals (min removals)",f:3},{n:"Minimum arrows to burst balloons",f:3},{n:"Maximum number of events attended",f:2,note:"add a heap when events have flexible days"}]}
+]},
+
+{id:"ms",name:"Monotonic structures",line:"#0E6B74",pats:[
+ {id:"ms1",name:"Monotonic stack: next greater / previous smaller",f:4,k:true,
+  sub:["array","string"],
+  inv:"The stack holds indices whose answer is still unknown, in monotone order. Popping an index is the moment its answer becomes known.",
+  trig:"'Next greater', 'span until', 'how far can this element extend before something bigger blocks it'.",
+  anti:"If you need the extreme over a fixed-size window rather than until a blocker, that is the deque variant, not this.",
+  tmpl:"st = []                # indices, values decreasing\nfor i, x in enumerate(a):\n    while st and a[st[-1]] < x:\n        j = st.pop(); ans[j] = i    # x is j's next greater\n    st.append(i)",
+  unl:["Daily temperatures","Largest rectangle in histogram","Trapping rain water","Stock span","Sum of subarray minimums"],
+  vars:[{n:"Next greater element I/II (circular via 2n loop)",f:4},{n:"Daily temperatures",f:4},{n:"Largest rectangle in histogram",f:3,note:"the boundary-sentinel trick; maximal-rectangle in a binary matrix builds on it row by row"},{n:"Trapping rain water (stack form)",f:3},{n:"Sum of subarray minimums (contribution counting)",f:2,note:"count how many subarrays each element dominates"},{n:"Remove k digits / smallest subsequence",f:3,note:"greedy popping to build the lexicographically smallest result"}]},
+ {id:"ms2",name:"Stack for nesting and deferred evaluation",f:4,k:false,
+  sub:["string","tree"],
+  inv:"The stack mirrors the nesting depth of the input; pushing enters a scope, popping resolves one.",
+  trig:"Brackets, nested encodings, expression evaluation, path normalisation, undo.",
+  anti:"If there is no nesting — a flat pass suffices — a stack is overhead.",
+  tmpl:"st = []\nfor tok in s:\n    if opens(tok): st.append(state); state = fresh()\n    elif closes(tok): state = combine(st.pop(), state)\n    else: state = extend(state, tok)",
+  unl:["Valid parentheses","Decode string","Basic calculator","Simplify path","Iterative tree traversal"],
+  vars:[{n:"Valid parentheses / longest valid parentheses",f:4},{n:"Decode string (k[abc])",f:3},{n:"Basic calculator I/II/III",f:3,note:"push the pending sign and result on '(' "},{n:"Simplify unix path",f:2},{n:"Evaluate reverse polish notation",f:2},{n:"Min stack / stack with O(1) extras",f:3}]}
+]},
+
+{id:"hp",name:"Heaps, top-k and selection",line:"#7A4E12",pats:[
+ {id:"hp1",name:"Bounded heap of size k",f:4,k:true,
+  sub:["array","stream"],
+  inv:"Keep a min-heap of exactly k elements; its root is the current k-th best, and anything worse than the root can be discarded forever.",
+  trig:"'K largest/closest/best', especially over a stream or a very large n.",
+  anti:"If counts are bounded and small, bucket sort is O(n) and beats the heap's O(n log k).",
+  tmpl:"h = []\nfor x in stream:\n    heappush(h, key(x))\n    if len(h) > k: heappop(h)\nreturn h    # h[0] is the k-th best",
+  unl:["Kth largest element","K closest points","Top K frequent","Kth largest in a stream"],
+  vars:[{n:"Kth largest element in an array / in a stream",f:4},{n:"K closest points to origin",f:3},{n:"Top K frequent words (heap with tie-breaking comparator)",f:3},{n:"Quickselect alternative, O(n) average",f:3,note:"faster in expectation but worse worst case and harder to write correctly"}]},
+ {id:"hp2",name:"Two heaps straddling a median",f:2,k:false,
+  sub:["stream"],
+  inv:"Max-heap holds the lower half, min-heap the upper half, sizes differ by at most one. The median is always at one or both roots.",
+  trig:"Running median, or any 'balance point of a stream' question.",
+  anti:"For a static array, just sort.",
+  tmpl:"# push to lo, move lo's max to hi, rebalance if hi larger\nheappush(lo, -x)\nheappush(hi, -heappop(lo))\nif len(hi) > len(lo): heappush(lo, -heappop(hi))",
+  unl:["Find median from data stream","Sliding window median"],
+  vars:[{n:"Find median from data stream",f:2},{n:"Sliding window median (needs lazy deletion)",f:1},{n:"IPO / maximise capital with two heaps",f:2}]},
+ {id:"hp3",name:"K-way merge",f:3,k:false,
+  sub:["lists","matrix"],
+  inv:"A heap of one candidate per list always has the global next-smallest at its root.",
+  trig:"Several sorted sources to combine, or a sorted matrix to traverse in order.",
+  anti:"Two lists only? Plain two-pointer merge, no heap.",
+  tmpl:"h = [(lst[0], i, 0) for i, lst in enumerate(lists) if lst]\nheapify(h)\nwhile h:\n    v, i, j = heappop(h); out.append(v)\n    if j+1 < len(lists[i]): heappush(h, (lists[i][j+1], i, j+1))",
+  unl:["Merge k sorted lists","Kth smallest in sorted matrix","Smallest range covering k lists"],
+  vars:[{n:"Merge k sorted lists",f:4,note:"divide-and-conquer pairwise merge is an equally good answer"},{n:"Kth smallest element in a sorted matrix",f:3,note:"binary search on value is the stronger alternative"},{n:"Smallest range covering elements from k lists",f:1}]},
+ {id:"hp4",name:"Heap-driven greedy scheduling",f:3,k:false,
+  sub:["tasks","intervals"],
+  inv:"At each decision point, the locally best available option is globally safe — the heap supplies it in O(log n).",
+  trig:"Tasks with deadlines, cooldowns, capacities, or costs to be processed in a chosen order.",
+  anti:"If a later choice can invalidate an earlier one, greedy is unsound — the problem is DP.",
+  tmpl:"heapify(available)\nwhile available:\n    best = heappop(available)\n    commit(best)\n    push_newly_available()",
+  unl:["Task scheduler","Reorganize string","Minimum cost to connect ropes","Meeting rooms II"],
+  vars:[{n:"Task scheduler with cooldown",f:3},{n:"Reorganize string / rearrange k distance apart",f:3},{n:"Minimum cost to connect sticks",f:2},{n:"Course schedule III (deadline greedy with regret)",f:1,note:"pop the worst past choice when a new one conflicts"}]}
+]},
+
+{id:"gt",name:"Graph traversal",line:"#1B5FBF",pats:[
+ {id:"gt1",name:"BFS on an unweighted graph",f:5,k:true,
+  sub:["graph","grid"],
+  inv:"Nodes leave the queue in non-decreasing distance order, so the first time you reach a node is by a shortest path. Mark visited at enqueue time, never at dequeue.",
+  trig:"Fewest steps, minimum moves, shortest transformation — with all edges costing the same.",
+  anti:"Edge weights differ? BFS is wrong; use Dijkstra (or 0-1 BFS with a deque if weights are only 0 and 1).",
+  tmpl:"q = deque([src]); seen = {src}; d = 0\nwhile q:\n    for _ in range(len(q)):        # level boundary\n        u = q.popleft()\n        if u == dst: return d\n        for v in adj(u):\n            if v not in seen:\n                seen.add(v); q.append(v)\n    d += 1",
+  unl:["Grid shortest path","Word ladder","Rotting oranges","Open the lock","Knight moves"],
+  vars:[{n:"Level-order with an explicit level loop",f:5},{n:"Multi-source BFS (seed the queue with every source)",f:4,note:"rotting oranges, walls and gates, nearest 0 — one pass, not one BFS per source"},{n:"Bidirectional BFS",f:2,note:"word ladder at scale"},{n:"0-1 BFS with a deque",f:1,note:"push-front on weight 0, push-back on weight 1"},{n:"BFS on an implicit state graph (locks, jumps, string transforms)",f:3,note:"the state is the node; there is no adjacency list to build"}]},
+ {id:"gt2",name:"DFS with visited states",f:5,k:true,
+  sub:["graph","grid"],
+  inv:"Three colours: unvisited, in-progress (on the current path), done. An edge to an in-progress node is a back edge, which means a cycle.",
+  trig:"Reachability, components, cycle detection, any 'explore everything from here'.",
+  anti:"A single visited set cannot detect cycles in a directed graph — you need the in-progress state as well.",
+  tmpl:"WHITE, GREY, BLACK = 0, 1, 2\ndef dfs(u):\n    state[u] = GREY\n    for v in adj(u):\n        if state[v] == GREY: return False   # cycle\n        if state[v] == WHITE and not dfs(v): return False\n    state[u] = BLACK; return True",
+  unl:["Cycle detection","Connected components","Topological sort","Course schedule","Clone graph"],
+  vars:[{n:"Directed cycle detection (3-colour)",f:4},{n:"Undirected cycle detection (track parent)",f:3},{n:"Connected components count",f:3},{n:"Bipartite check via 2-colouring",f:3},{n:"Clone / deep-copy graph with a map",f:3},{n:"Bridges and articulation points (Tarjan)",f:1,note:"specialist; low-link values"},{n:"Strongly connected components (Kosaraju/Tarjan)",f:1}]},
+ {id:"gt3",name:"Grid as an implicit graph",f:5,k:true,
+  sub:["grid"],
+  inv:"Each cell is a node; the 4 or 8 neighbours are its edges. No adjacency list is ever built.",
+  trig:"Any 2D matrix where you move between adjacent cells.",
+  anti:"If moves are unconstrained jumps rather than neighbours, build the real state graph instead.",
+  tmpl:"DIRS = ((1,0),(-1,0),(0,1),(0,-1))\ndef ok(r,c): return 0 <= r < R and 0 <= c < C\nfor dr, dc in DIRS:\n    nr, nc = r+dr, c+dc\n    if ok(nr,nc) and not seen[nr][nc]: ...",
+  unl:["Number of islands","Flood fill","Surrounded regions","Pacific Atlantic","Word search"],
+  vars:[{n:"Number of islands / flood fill",f:5},{n:"Sink the border first (surrounded regions, enclosed shapes)",f:3,note:"start from the edges and invert the question"},{n:"Reverse traversal from targets (Pacific Atlantic water flow)",f:3,note:"flow backwards from each ocean instead of forwards from each cell"},{n:"Shortest path in a binary matrix (BFS)",f:3},{n:"Grid with a state dimension (keys, obstacles removed)",f:2,note:"visited key becomes (r, c, extra state)"}]},
+ {id:"gt4",name:"Topological sort",f:4,k:true,
+  sub:["DAG"],
+  inv:"Kahn: a node is emitted only when its in-degree hits zero, meaning every prerequisite is already emitted. If fewer than n nodes are emitted, a cycle exists.",
+  trig:"Ordering under dependencies, prerequisites, build order, or 'is this schedule possible'.",
+  anti:"Only defined on a DAG. If the graph has a cycle, the correct output is 'impossible', not a partial order.",
+  tmpl:"q = deque([u for u in V if indeg[u] == 0])\norder = []\nwhile q:\n    u = q.popleft(); order.append(u)\n    for v in adj(u):\n        indeg[v] -= 1\n        if indeg[v] == 0: q.append(v)\nreturn order if len(order) == n else []",
+  unl:["Course schedule I/II","Alien dictionary","Parallel courses","DP on a DAG"],
+  vars:[{n:"Course schedule I (feasible?) and II (produce the order)",f:4},{n:"Alien dictionary (derive edges from adjacent word pairs first)",f:3,note:"the hard part is edge construction and the invalid-prefix case"},{n:"Minimum semesters / longest path in a DAG",f:2,note:"level-by-level Kahn gives the answer directly"},{n:"Lexicographically smallest topological order",f:1,note:"swap the queue for a heap"}]},
+ {id:"gt5",name:"Weighted shortest path",f:3,k:false,
+  sub:["graph"],
+  inv:"Dijkstra: once a node is popped from the priority queue, its distance is final — valid only when all weights are non-negative.",
+  trig:"Minimum cost, time, or effort with differing edge weights.",
+  anti:"Negative edges break Dijkstra's finality invariant; use Bellman-Ford. Negative cycles mean no shortest path exists.",
+  tmpl:"pq = [(0, src)]; dist = {src: 0}\nwhile pq:\n    d, u = heappop(pq)\n    if d > dist.get(u, inf): continue    # stale entry\n    for v, w in adj(u):\n        if d + w < dist.get(v, inf):\n            dist[v] = d + w; heappush(pq, (d+w, v))",
+  unl:["Network delay time","Path with minimum effort","Cheapest flights within K stops"],
+  vars:[{n:"Dijkstra with lazy deletion",f:3},{n:"Bellman-Ford / cheapest flights with at most K stops",f:2,note:"the hop limit forces relaxation in rounds, not Dijkstra"},{n:"Path with minimum effort / maximum probability",f:2,note:"swap the relaxation operator — min-max or product instead of sum"},{n:"Floyd-Warshall all-pairs",f:1}]},
+ {id:"gt6",name:"Union-Find (disjoint set union)",f:4,k:true,
+  sub:["graph"],
+  inv:"Each set has one representative. Union by rank keeps trees shallow; path compression flattens them on lookup. Near O(1) amortised.",
+  trig:"Dynamic connectivity, 'are these two in the same group', merging equivalence classes, or a cycle check while edges arrive.",
+  anti:"Union-find cannot un-merge. If the problem removes edges over time, process the timeline in reverse or use a different structure.",
+  tmpl:"def find(x):\n    while p[x] != x:\n        p[x] = p[p[x]]      # path halving\n        x = p[x]\n    return x\ndef union(a, b):\n    ra, rb = find(a), find(b)\n    if ra == rb: return False   # already connected -> cycle\n    if rank[ra] < rank[rb]: ra, rb = rb, ra\n    p[rb] = ra; rank[ra] += (rank[ra] == rank[rb])\n    return True",
+  unl:["Number of provinces","Redundant connection","Accounts merge","Kruskal MST","Number of islands II"],
+  vars:[{n:"Count connected components / provinces",f:4},{n:"Redundant connection (first edge that closes a cycle)",f:3},{n:"Accounts merge / equations by equivalence",f:3},{n:"Union-find with weights (evaluate division)",f:2,note:"store a ratio to the parent"},{n:"Offline reverse-time processing for deletions",f:1},{n:"Kruskal's MST",f:2,note:"sort edges, union greedily"}]}
+]},
+
+{id:"tr",name:"Trees",line:"#2C7A3F",pats:[
+ {id:"tr1",name:"Postorder aggregation (return-value DFS)",f:5,k:true,
+  sub:["tree"],
+  inv:"Each node returns a compact summary of its own subtree. The parent combines children's summaries plus its own value. Nothing global is needed.",
+  trig:"Height, diameter, balance, subtree sums, 'is this subtree valid', max path sum. Most tree questions are this pattern.",
+  anti:"If a node needs information from above it (a running prefix, an allowed range), that is the top-down variant — pass state down as a parameter instead.",
+  tmpl:"def dfs(node):\n    if not node: return BASE\n    L, R = dfs(node.left), dfs(node.right)\n    ans = best(ans, combine_through(L, R, node))  # answer may pass through\n    return extend_upward(L, R, node)              # what the parent may use",
+  unl:["Max depth","Diameter","Balanced binary tree","Max path sum","Count good nodes","House robber III"],
+  vars:[{n:"Maximum depth / minimum depth",f:4},{n:"Diameter of binary tree",f:4,note:"the classic split: what you return upward differs from what you record"},{n:"Balanced binary tree (return -1 as a failure sentinel)",f:3},{n:"Binary tree maximum path sum",f:3,note:"clamp negative children to zero"},{n:"Lowest common ancestor (bottom-up)",f:4},{n:"House robber III (return a pair: rob / skip)",f:2,note:"DP on trees begins here"},{n:"Count univalue / good subtrees",f:2}]},
+ {id:"tr2",name:"Top-down DFS with inherited state",f:4,k:false,
+  sub:["tree"],
+  inv:"State flows downward as a parameter — a path so far, a valid range, a running max. The child's context is fully determined by its ancestors.",
+  trig:"Root-to-leaf paths, BST validation, 'greater than everything on the path'.",
+  anti:"Using a shared mutable list requires disciplined backtracking; forgetting to pop is the standard bug.",
+  tmpl:"def dfs(node, lo, hi, path):\n    if not node: return\n    if not (lo < node.val < hi): fail()\n    path.append(node.val)\n    dfs(node.left,  lo, node.val, path)\n    dfs(node.right, node.val, hi, path)\n    path.pop()          # restore",
+  unl:["Validate BST","Path sum I/II","Sum root to leaf numbers","Count good nodes"],
+  vars:[{n:"Validate BST with (lo, hi) bounds",f:4,note:"comparing only to the direct parent is the classic wrong answer"},{n:"Path sum II (all root-to-leaf paths)",f:3},{n:"Sum of root-to-leaf numbers",f:2},{n:"Count good nodes (carry the path max)",f:2}]},
+ {id:"tr3",name:"BST ordering property",f:3,k:false,
+  sub:["BST"],
+  inv:"Inorder traversal of a BST is a sorted sequence. Any 'sorted array' technique becomes available inside an inorder walk.",
+  trig:"Kth smallest, validate, closest value, range sum, successor.",
+  anti:"On an unbalanced BST these are O(n), not O(log n) — say so before someone asks.",
+  tmpl:"def inorder(node):\n    if not node: return\n    inorder(node.left)\n    visit(node.val)      # values arrive in sorted order\n    inorder(node.right)",
+  unl:["Kth smallest in BST","Validate BST","Range sum of BST","Convert sorted array to BST"],
+  vars:[{n:"Kth smallest element in a BST",f:3,note:"iterative inorder with a stack stops early"},{n:"Inorder successor / predecessor",f:2},{n:"Range sum with pruning",f:2},{n:"Sorted array to balanced BST (divide and conquer)",f:2},{n:"Recover BST from two swapped nodes",f:1}]},
+ {id:"tr4",name:"Trie (prefix tree)",f:3,k:false,
+  sub:["string"],
+  inv:"A path from the root spells a prefix. Shared prefixes are stored exactly once, so lookup is O(length) and independent of dictionary size.",
+  trig:"Many words, repeated prefix queries, autocomplete, or a DFS that must prune against a dictionary.",
+  anti:"A single lookup against one word? A hash set is simpler and faster.",
+  tmpl:"class Node: __slots__ = ('kids','end')\ndef insert(root, w):\n    cur = root\n    for ch in w:\n        cur = cur.kids.setdefault(ch, Node())\n    cur.end = True",
+  unl:["Implement trie","Word search II","Design add-and-search words","Replace words"],
+  vars:[{n:"Implement trie with insert/search/startsWith",f:3},{n:"Word search II (trie + grid backtracking)",f:3,note:"the trie prunes the DFS; this is the highest-value trie question"},{n:"Design add-and-search with '.' wildcard",f:2},{n:"Maximum XOR of two numbers (binary trie)",f:2,note:"trie over bits, greedy descent"}]},
+ {id:"tr5",name:"Range query structures",f:2,k:false,
+  sub:["array"],
+  inv:"A tree over index ranges: each node stores an aggregate for its span, so a query touches O(log n) nodes and an update repairs O(log n) nodes.",
+  trig:"Interleaved range queries and point updates. The 'with updates' modifier applied to prefix sums.",
+  anti:"No updates? Prefix sums are simpler and faster. One update at the end? Difference array.",
+  tmpl:"# BIT: prefix sums with point updates\ndef add(i, v):\n    while i <= n: t[i] += v; i += i & -i\ndef pref(i):\n    s = 0\n    while i > 0: s += t[i]; i -= i & -i\n    return s",
+  unl:["Range sum query mutable","Count of smaller numbers after self","Count inversions"],
+  vars:[{n:"Fenwick tree / BIT for prefix sums with updates",f:2},{n:"Segment tree with lazy propagation",f:1},{n:"Count of smaller numbers after self",f:2,note:"also solvable by merge sort — see divide and conquer"}]}
+]},
+
+{id:"bt",name:"Backtracking",line:"#8C3AA0",pats:[
+ {id:"bt1",name:"Choose, explore, unchoose",f:5,k:true,
+  sub:["array","string","grid"],
+  inv:"State is exactly restored after each branch returns. The recursion tree is the search space, and pruning removes whole subtrees.",
+  trig:"'All possible', 'enumerate every', 'find any valid arrangement'. Output is a set of configurations, not one number.",
+  anti:"If you only need a count or an optimum, memoised recursion or DP is nearly always faster — enumeration is wasted work.",
+  tmpl:"def bt(i, path):\n    if done(i): out.append(path[:]); return\n    for choice in options(i):\n        if not viable(choice): continue   # prune early\n        path.append(choice)\n        bt(next(i, choice), path)\n        path.pop()                        # restore",
+  unl:["Subsets","Permutations","Combination sum","N-Queens","Word search","Palindrome partitioning"],
+  vars:[{n:"Subsets / subsets with duplicates",f:4,note:"include-exclude, or a loop with a start index"},{n:"Permutations (used array, or in-place swap)",f:4},{n:"Combination sum I/II/III (reuse allowed or not)",f:4,note:"start index controls reuse — pass i to reuse, i+1 not to"},{n:"Duplicate handling: sort, then skip equal values at the same depth",f:3,note:"one line, and it is the single most missed detail in this family"},{n:"Palindrome partitioning",f:3},{n:"Letter combinations of a phone number",f:3},{n:"N-Queens with column/diagonal sets",f:2,note:"the pruning sets are the whole trick"},{n:"Word search on a grid (mark, recurse, restore)",f:3},{n:"Sudoku solver",f:1}]}
+]},
+
+{id:"dp",name:"Dynamic programming",line:"#C0392B",pats:[
+ {id:"dp1",name:"Linear DP over one sequence",f:5,k:true,
+  sub:["array"],
+  inv:"dp[i] depends only on a bounded window of earlier states. Define what dp[i] means in one sentence before writing anything else — most DP bugs are definition bugs, not code bugs.",
+  trig:"'Maximum/minimum/number of ways' over a sequence with a local decision at each position.",
+  anti:"If the choice at i depends on a decision far away that you have not encoded, your state is incomplete — add a dimension rather than patching the recurrence.",
+  tmpl:"dp = [BASE] * (n+1)\nfor i in range(1, n+1):\n    dp[i] = combine(dp[i-1], dp[i-2], a[i-1])\nreturn dp[n]\n# then collapse to two rolling variables",
+  unl:["Climbing stairs","House robber","Max subarray","Decode ways","Jump game"],
+  vars:[{n:"Climbing stairs / min cost climbing",f:4},{n:"House robber I/II (circular = two linear runs)",f:4},{n:"Maximum subarray (Kadane)",f:4,note:"dp[i] = best ending exactly at i — the 'ending at i' framing is the key"},{n:"Decode ways",f:3},{n:"Word break (dp over split points)",f:3},{n:"Longest increasing subsequence, O(n^2) then O(n log n)",f:4,note:"the n log n form is binary search on a patience pile, not DP"},{n:"Rolling-variable space reduction",f:3,note:"a modifier, not a separate problem"}]},
+ {id:"dp2",name:"Knapsack family",f:4,k:true,
+  sub:["array"],
+  inv:"dp[i][c] = best using the first i items with capacity c. The iteration direction over capacity decides whether an item can be reused: descending = 0/1, ascending = unbounded.",
+  trig:"Pick a subset under a budget, target sum, or exact-change condition.",
+  anti:"If items have fractional value and can be split, it is a greedy problem, not a knapsack.",
+  tmpl:"dp = [0]*(C+1)\nfor w, v in items:\n    for c in range(C, w-1, -1):     # descending -> each item once\n        dp[c] = max(dp[c], dp[c-w] + v)",
+  unl:["Partition equal subset sum","Coin change I/II","Target sum","Ones and zeroes","Combination sum IV"],
+  vars:[{n:"Subset sum / partition equal subset sum",f:4},{n:"Coin change (min coins) and coin change II (count ways)",f:4,note:"loop order decides combinations vs permutations — a classic trap"},{n:"Target sum (assign +/-, reduces to subset sum)",f:3},{n:"Unbounded knapsack / rod cutting",f:2},{n:"Multi-dimensional capacity (ones and zeroes)",f:2}]},
+ {id:"dp3",name:"Two-sequence DP",f:4,k:true,
+  sub:["string","array"],
+  inv:"dp[i][j] compares prefix i of A with prefix j of B. The recurrence branches on whether the last characters match.",
+  trig:"Two strings or arrays being aligned, edited, matched, or interleaved.",
+  anti:"If one sequence is a pattern with wildcards, the recurrence gains cases — do not force the plain LCS shape onto it.",
+  tmpl:"for i in 1..n:\n  for j in 1..m:\n    if A[i-1] == B[j-1]: dp[i][j] = dp[i-1][j-1] + 1\n    else: dp[i][j] = max(dp[i-1][j], dp[i][j-1])",
+  unl:["Longest common subsequence","Edit distance","Distinct subsequences","Regex matching","Interleaving string"],
+  vars:[{n:"Longest common subsequence",f:4},{n:"Edit distance",f:4,note:"three operations, three predecessors"},{n:"Delete operation / minimum ASCII delete sum",f:2},{n:"Distinct subsequences (count, not length)",f:2},{n:"Regular expression and wildcard matching",f:2,note:"the '*' case is the hard one — zero or more"},{n:"Interleaving string",f:2},{n:"Longest common substring (contiguous, so reset on mismatch)",f:2}]},
+ {id:"dp4",name:"Grid DP",f:3,k:false,
+  sub:["grid"],
+  inv:"dp[r][c] depends on cells above and left only, so a single forward sweep suffices.",
+  trig:"Paths through a matrix, minimum cost routes, counting ways to reach a cell.",
+  anti:"If movement can go in all four directions, there is no topological order — that is BFS or Dijkstra, not a sweep.",
+  tmpl:"for r in range(R):\n  for c in range(C):\n    dp[r][c] = g[r][c] + min(dp[r-1][c], dp[r][c-1])",
+  unl:["Unique paths","Minimum path sum","Maximal square","Dungeon game"],
+  vars:[{n:"Unique paths I/II (with obstacles)",f:3},{n:"Minimum path sum",f:3},{n:"Maximal square / maximal rectangle",f:2,note:"maximal rectangle borrows the histogram stack per row"},{n:"Dungeon game (sweep backwards — the constraint is on the future)",f:1}]},
+ {id:"dp5",name:"State-machine DP",f:3,k:false,
+  sub:["array"],
+  inv:"A small set of named states with defined transitions; dp[i][state] is the best value at index i while in that state.",
+  trig:"Holding/not holding, cooldowns, transaction limits, alternating constraints.",
+  anti:"If states are unbounded, this collapses — you need a different formulation.",
+  tmpl:"hold = -inf; free = 0\nfor p in prices:\n    hold, free = max(hold, free - p), max(free, hold + p)",
+  unl:["Best time to buy and sell stock I–IV","With cooldown","With fee"],
+  vars:[{n:"Stock with one transaction / unlimited transactions",f:3},{n:"With cooldown or with a fee",f:2},{n:"At most k transactions",f:2,note:"add a k dimension to the state"},{n:"Alternating / wiggle subsequence",f:2}]},
+ {id:"dp6",name:"Interval DP",f:2,k:false,
+  sub:["array","string"],
+  inv:"dp[i][j] is the answer for the closed interval [i, j], built by iterating over increasing lengths and choosing a split or last-removed point inside.",
+  trig:"'Merge/remove/split until one remains', or a palindrome over a substring.",
+  anti:"If the choice at each step does not partition the interval independently, this shape does not apply.",
+  tmpl:"for length in 2..n:\n  for i in 0..n-length:\n    j = i + length - 1\n    dp[i][j] = best(split(dp[i][k], dp[k+1][j]) for k in i..j-1)",
+  unl:["Longest palindromic subsequence","Burst balloons","Matrix chain","Stone game"],
+  vars:[{n:"Longest palindromic subsequence / substring",f:3},{n:"Burst balloons (think last-to-burst, not first)",f:1,note:"the reframing is the entire difficulty"},{n:"Stone game / predict the winner",f:2},{n:"Minimum cost to cut a stick",f:1}]},
+ {id:"dp7",name:"DP over subsets (bitmask)",f:1,k:false,
+  sub:["set"],
+  inv:"The state is a bitmask of which elements are used; n must be small (roughly <= 20).",
+  trig:"Assignment or ordering problems with tiny n and no greedy structure.",
+  anti:"If n is large, this is exponential — look for a different formulation.",
+  tmpl:"for mask in range(1 << n):\n  for i in range(n):\n    if mask >> i & 1: dp[mask] = best(dp[mask], dp[mask ^ (1<<i)] + cost(i, mask))",
+  unl:["Travelling salesman","Partition to k equal subsets","Shortest superstring"],
+  vars:[{n:"Partition to k equal sum subsets",f:2},{n:"Travelling salesman (Held–Karp)",f:1},{n:"Minimum incompatibility / task assignment",f:1}]}
+]},
+
+{id:"gr",name:"Greedy and exchange arguments",line:"#0E7C86",pats:[
+ {id:"gr1",name:"Sort, then commit locally",f:4,k:false,
+  sub:["array","intervals"],
+  inv:"An exchange argument: any optimal solution can be rewritten to include the greedy choice without getting worse. If you cannot state that argument, the greedy is a guess.",
+  trig:"An ordering exists under which the locally best move is provably safe.",
+  anti:"If a choice can be regretted later, greedy fails — but a heap that lets you undo the worst past choice sometimes rescues it.",
+  tmpl:"a.sort(key=exchange_order)\nfor x in a:\n    if compatible(x, state): take(x)",
+  unl:["Interval scheduling","Assign cookies","Two-city scheduling","Boats to save people"],
+  vars:[{n:"Assign cookies / two-pointer greedy matching",f:2},{n:"Two city scheduling (sort by cost difference)",f:2},{n:"Boats to save people",f:2},{n:"Largest number by custom comparator",f:2,note:"the comparator is the whole problem"},{n:"Gas station (single pass with a reset point)",f:3}]},
+ {id:"gr2",name:"Reach frontier / jump greedy",f:3,k:false,
+  sub:["array"],
+  inv:"Maintain the furthest index reachable so far. If the current index ever exceeds it, you are stuck.",
+  trig:"Jump game, minimum jumps, video stitching, coverage problems.",
+  anti:"If jumps have varying costs rather than counts, this is DP or Dijkstra.",
+  tmpl:"far = 0\nfor i, x in enumerate(a):\n    if i > far: return False\n    far = max(far, i + x)\nreturn True",
+  unl:["Jump game I/II","Video stitching","Minimum taps to water a garden"],
+  vars:[{n:"Jump game (reachability)",f:3},{n:"Jump game II (minimum jumps, level-by-level like BFS)",f:3},{n:"Minimum taps / video stitching (interval coverage)",f:2}]}
+]},
+
+{id:"dc",name:"Divide and conquer",line:"#4A5568",pats:[
+ {id:"dc1",name:"Split, solve, merge",f:2,k:false,
+  sub:["array","linked list"],
+  inv:"The merge step can compute something about cross-half pairs that neither half knows alone — that is where the real work lives.",
+  trig:"Counting pairs across a whole array, sorting a linked list, or a recursive structure with a natural midpoint.",
+  anti:"If the merge is not cheaper than brute force, D&C buys nothing.",
+  tmpl:"def solve(lo, hi):\n    if hi - lo <= 1: return base\n    mid = (lo + hi) // 2\n    L, R = solve(lo, mid), solve(mid, hi)\n    return merge(L, R)     # count cross-pairs here",
+  unl:["Merge sort","Count inversions","Sort list","Reverse pairs"],
+  vars:[{n:"Merge sort / sort a linked list in O(1) space",f:2},{n:"Count inversions / reverse pairs",f:2,note:"count during the merge"},{n:"Quickselect for the kth element",f:3},{n:"Construct tree from preorder + inorder",f:3,note:"index map to find the root split in O(1)"},{n:"Different ways to add parentheses",f:1}]}
+]},
+
+{id:"bm",name:"Bit manipulation",line:"#6B4E9C",pats:[
+ {id:"bm1",name:"XOR cancellation",f:3,k:true,
+  sub:["array","numbers"],
+  inv:"x ^ x = 0 and x ^ 0 = x, and XOR is commutative. Anything appearing an even number of times vanishes.",
+  trig:"'Every element appears twice except one', missing number, or a pairing question with O(1) space required.",
+  anti:"If duplicates come in threes, XOR cancels nothing — count bits modulo 3 instead.",
+  tmpl:"r = 0\nfor x in a: r ^= x\nreturn r",
+  unl:["Single number I/II/III","Missing number","Maximum XOR pair","Prefix XOR subarrays"],
+  vars:[{n:"Single number",f:3},{n:"Single number II (bit counts mod 3)",f:2},{n:"Single number III (split by a differing bit)",f:2,note:"lowest set bit of the total XOR partitions the array"},{n:"Missing number / find the duplicate",f:3},{n:"Maximum XOR of two numbers (binary trie)",f:2}]},
+ {id:"bm2",name:"Bit tricks and subset enumeration",f:2,k:false,
+  sub:["numbers","set"],
+  inv:"x & -x isolates the lowest set bit; x & (x-1) clears it. Iterating masks from 0 to 2^n - 1 enumerates every subset exactly once.",
+  trig:"Popcount, power-of-two checks, small-n subset enumeration, bitmask DP setup.",
+  anti:"Readable code usually beats a clever trick in an interview unless the trick is the point.",
+  tmpl:"while x: x &= x - 1; count += 1        # popcount\nsub = mask\nwhile sub: sub = (sub - 1) & mask      # all submasks of mask",
+  unl:["Counting bits","Power of two","Bitmask DP","Subsets via masks"],
+  vars:[{n:"Number of 1 bits / counting bits (DP on bits)",f:2},{n:"Power of two / power of four",f:2},{n:"Subsets via bitmask enumeration",f:2},{n:"Submask enumeration for set-cover DP",f:1},{n:"Sum of two integers without + operator",f:1}]}
+]},
+
+{id:"st",name:"String algorithms",line:"#9C5A1E",pats:[
+ {id:"st1",name:"Expand around centre",f:3,k:false,
+  sub:["string"],
+  inv:"Every palindrome has a centre — n odd centres and n-1 even centres. Expanding from each is O(n^2) total with O(1) space.",
+  trig:"Longest palindromic substring, counting palindromic substrings.",
+  anti:"For subsequences rather than substrings, this fails entirely — that is interval DP.",
+  tmpl:"def grow(l, r):\n    while l >= 0 and r < n and s[l] == s[r]: l -= 1; r += 1\n    return s[l+1:r]",
+  unl:["Longest palindromic substring","Palindromic substrings count"],
+  vars:[{n:"Longest palindromic substring",f:4},{n:"Count palindromic substrings",f:2},{n:"Manacher's algorithm, O(n)",f:1,note:"rarely required; know that it exists"}]},
+ {id:"st2",name:"Rolling hash and prefix functions",f:2,k:false,
+  sub:["string"],
+  inv:"A hash of a window updates in O(1) as it slides; KMP's prefix function records the longest proper prefix that is also a suffix, so matching never backtracks.",
+  trig:"Substring search at scale, repeated-substring detection, shortest palindrome.",
+  anti:"For one search in a short string, the built-in find is the right answer and saying so is fine.",
+  tmpl:"# KMP failure function\nfor i in 1..m-1:\n    while j and p[i] != p[j]: j = f[j-1]\n    if p[i] == p[j]: j += 1\n    f[i] = j",
+  unl:["Implement strStr","Repeated substring pattern","Shortest palindrome"],
+  vars:[{n:"Implement strStr / substring search",f:2},{n:"Repeated substring pattern",f:2},{n:"Shortest palindrome (KMP on s + '#' + reverse(s))",f:1},{n:"Longest duplicate substring (binary search + rolling hash)",f:1}]}
+]},
+
+{id:"de",name:"Design and simulation",line:"#3B6EA5",pats:[
+ {id:"de1",name:"Hashmap plus an auxiliary structure",f:4,k:true,
+  sub:["design"],
+  inv:"The map gives O(1) lookup; the second structure gives O(1) ordering, eviction, or random access. Every mutation must update both, consistently.",
+  trig:"'Design a cache / a structure with O(1) insert, delete and random'.",
+  anti:"If any single operation cannot be made O(1) in both structures, the design is wrong — rethink before coding.",
+  tmpl:"# LRU: dict[key] -> node in a doubly linked list\nget:  move node to front, return value\nput:  insert at front; if over capacity, drop the tail\n# O(1) random: dict[key] -> index in an array\ndelete: swap with the last element, pop, fix the moved key's index",
+  unl:["LRU cache","LFU cache","Insert delete getRandom O(1)","Time-based key-value store"],
+  vars:[{n:"LRU cache",f:4,note:"ordered dict is acceptable, but be ready to write the linked list"},{n:"Insert / delete / getRandom in O(1)",f:3,note:"the swap-with-last deletion is the trick"},{n:"LFU cache",f:2,note:"a map of frequency to a list, plus a min-frequency pointer"},{n:"Time-based key-value store (binary search on timestamps)",f:2},{n:"Design hit counter / rate limiter",f:2},{n:"Iterator with peek / flatten nested iterator",f:2,note:"lazy evaluation with a stack"}]}
+]},
+
+{id:"mt",name:"Math and number theory",line:"#767676",pats:[
+ {id:"mt1",name:"Arithmetic identities and simulation",f:2,k:false,
+  sub:["numbers"],
+  inv:"Most of these are one identity plus careful overflow and edge handling. The edge cases are the interview.",
+  trig:"GCD, primes, exponentiation, digit manipulation, matrix rotation.",
+  anti:"Reaching for a formula you half-remember is riskier than deriving a small case by hand.",
+  tmpl:"def gcd(a, b):\n    while b: a, b = b, a % b\n    return a\n\ndef power(x, n):        # fast exponentiation\n    r = 1\n    while n:\n        if n & 1: r *= x\n        x *= x; n >>= 1\n    return r",
+  unl:["Sieve of Eratosthenes","Pow(x,n)","Rotate image","Spiral matrix"],
+  vars:[{n:"Sieve of Eratosthenes / count primes",f:2},{n:"Pow(x, n) with negative exponents",f:2},{n:"Rotate image in place (transpose then reverse)",f:2},{n:"Spiral matrix traversal",f:2},{n:"Reverse integer / string to integer with overflow",f:2},{n:"Reservoir sampling / random with weights",f:1}]}
+]}
+];
+
+const AXES=[
+ ["find → count → k-th → all → optimal","The same state and transition, five different things read off it. Counting usually means summing where finding returned early."],
+ ["return the value → return the witness","Add a parent or choice pointer and reconstruct backwards. Doubles the code, never changes the algorithm."],
+ ["static → point updates → streaming","Prefix sum becomes a Fenwick tree becomes a running aggregate. Same question, three structures."],
+ ["all non-negative → negatives allowed","Kills sliding window and Dijkstra. Hands the problem to prefix-sum-plus-hashmap and Bellman-Ford respectively."],
+ ["distinct → duplicates allowed","Backtracking needs sort-and-skip; binary search loses its worst-case guarantee; two pointers need explicit skips."],
+ ["linear → circular","Usually solved by doubling the array, or by running the linear version twice and combining."],
+ ["unconstrained → O(1) space","Forces in-place pointers, XOR tricks, Floyd's cycle detection, or rolling DP variables."],
+ ["one query → many queries","Shifts the cost to precomputation: prefix sums, sparse tables, tries, or a memo shared across calls."],
+ ["exact target → at most / at least","Converts an equality search into a monotone predicate, which unlocks binary search or the at-most-K subtraction trick."],
+ ["1D → 2D → k-D","Grid DP, 2D prefix sums, and multi-dimensional knapsack are all this one toggle."]
+];
+
+/* ---- build ---- */
+let selected=null, fKey=false, fHigh=false;
+const map=document.getElementById('map');
+
+function bars(f){
+  let s='<span class="freq" title="frequency '+f+' of 5">';
+  for(let i=1;i<=5;i++) s+='<i class="'+(i<=f?'on':'')+'"></i>';
+  return s+'</span>';
+}
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+D.forEach(g=>{
+  const el=document.createElement('section');
+  el.className='group'; el.dataset.open='false'; el.style.setProperty('--line',g.line);
+  const keys=g.pats.filter(p=>p.k).length;
+  el.innerHTML=
+   '<button class="ghead" aria-expanded="false"><span class="caret">▼</span>'+
+   '<span class="gname">'+g.name+'</span>'+
+   '<span class="gmeta">'+g.pats.length+' patterns'+(keys?' · '+keys+' keystone':'')+'</span></button>'+
+   '<div class="glist">'+g.pats.map(p=>
+     '<div class="pat'+(p.k?' k':'')+'" data-id="'+p.id+'" data-key="'+p.k+'" data-f="'+p.f+'" data-vopen="false">'+
+       '<div class="prow">'+
+         '<button class="pbtn">'+(p.k?'<span class="keydot" title="keystone"></span>':'<span class="keyslot"></span>')+
+         '<span class="pname">'+p.name+'</span>'+bars(p.f)+'</button>'+
+         '<button class="vtog" aria-expanded="false">'+p.vars.length+' variants ▾</button>'+
+       '</div>'+
+       '<ul class="vars">'+p.vars.map(v=>
+         '<li>'+bars(v.f)+'<span class="vn">'+v.n+(v.note?'<span class="vnote">'+v.note+'</span>':'')+'</span></li>').join('')+
+       '</ul>'+
+     '</div>').join('')+'</div>';
+
+  el.querySelector('.ghead').onclick=()=>{
+    const o=el.dataset.open==='true';
+    el.dataset.open=String(!o);
+    el.querySelector('.ghead').setAttribute('aria-expanded',String(!o));
+  };
+  el.querySelectorAll('.pat').forEach((pe,i)=>{
+    const p=g.pats[i];
+    pe.querySelector('.pbtn').onclick=()=>show(g,p,pe);
+    const vt=pe.querySelector('.vtog');
+    vt.onclick=()=>{
+      const o=pe.dataset.vopen==='true';
+      pe.dataset.vopen=String(!o);
+      vt.setAttribute('aria-expanded',String(!o));
+      vt.innerHTML=p.vars.length+' variants '+(o?'▾':'▴');
+    };
+  });
+  map.appendChild(el);
+});
+
+document.getElementById('axes').innerHTML=AXES.map(a=>
+  '<div class="axis"><div class="an">'+a[0]+'</div><div class="ad">'+a[1]+'</div></div>').join('');
+
+const nP=D.length,
+      nN=D.reduce((s,g)=>s+g.pats.length,0),
+      nV=D.reduce((s,g)=>s+g.pats.reduce((t,p)=>t+p.vars.length,0),0),
+      nK=D.reduce((s,g)=>s+g.pats.filter(p=>p.k).length,0);
+cP.textContent=nP; cN.textContent=nN; cV.textContent=nV; cK.textContent=nK;
+
+/* ---- detail ---- */
+const det=document.getElementById('detail'),
+      dc=document.getElementById('dcontent'),
+      emp=document.getElementById('empty');
+
+function show(g,p,pe){
+  document.querySelectorAll('.pat[data-sel="true"]').forEach(x=>x.dataset.sel='false');
+  pe.dataset.sel='true'; selected=p.id;
+  const lab=['','rare','occasional','common','very common','near-certain'][p.f];
+  dc.innerHTML=
+   '<div class="dhead" style="border-top:4px solid '+g.line+'">'+
+     '<button class="dclose" id="dx" aria-label="Close details">✕</button>'+
+     '<div class="dpath">'+g.name+'</div>'+
+     '<div class="dname">'+p.name+'</div>'+
+     '<div class="dtags">'+(p.k?'<span class="tag k">Keystone</span>':'')+
+       p.sub.map(s=>'<span class="tag">'+s+'</span>').join('')+'</div>'+
+   '</div>'+
+   '<div class="dbody">'+
+     '<div class="sec"><h3>Interview frequency</h3><div class="freqline">'+bars(p.f)+
+       '<span class="lab">'+p.f+' of 5 — '+lab+'</span></div></div>'+
+     '<div class="sec"><h3>Invariant</h3><p>'+p.inv+'</p></div>'+
+     '<div class="sec"><h3>Recognise it by</h3><p>'+p.trig+'</p></div>'+
+     '<div class="sec"><h3>The lookalike that isn\'t</h3><p class="anti">'+p.anti+'</p></div>'+
+     '<div class="sec"><h3>Template</h3><pre>'+esc(p.tmpl)+'</pre></div>'+
+     '<div class="sec"><h3>Reaches</h3><ul class="ulist">'+p.unl.map(u=>'<li>'+u+'</li>').join('')+'</ul></div>'+
+     '<div class="sec"><h3>Variants ('+p.vars.length+')</h3><ul class="ulist">'+
+       p.vars.map(v=>'<li>'+v.n+' <span style="color:var(--muted)">· freq '+v.f+'</span>'+
+       (v.note?'<br><span style="color:var(--muted);font-size:13px">'+v.note+'</span>':'')+'</li>').join('')+'</ul></div>'+
+   '</div>';
+  dc.hidden=false; emp.hidden=true;
+  document.getElementById('dx').onclick=close;
+  if(window.innerWidth<1000){det.classList.add('open');}
+  else{det.scrollTop=0;}
+}
+function close(){
+  det.classList.remove('open');
+  document.querySelectorAll('.pat[data-sel="true"]').forEach(x=>x.dataset.sel='false');
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
+
+/* ---- filters ---- */
+function apply(){
+  D.forEach((g,gi)=>{
+    const ge=map.children[gi]; let vis=0;
+    ge.querySelectorAll('.pat').forEach(pe=>{
+      const ok=(!fKey||pe.dataset.key==='true')&&(!fHigh||+pe.dataset.f>=4);
+      pe.style.display=ok?'':'none'; if(ok)vis++;
+    });
+    ge.style.display=vis?'':'none';
+    ge.querySelector('.gmeta').textContent=vis+(vis===1?' pattern':' patterns');
+    if((fKey||fHigh)&&vis) ge.dataset.open='true';
+  });
+}
+const bK=document.getElementById('fKey'), bH=document.getElementById('fHigh');
+bK.onclick=()=>{fKey=!fKey;bK.setAttribute('aria-pressed',String(fKey));apply();};
+bH.onclick=()=>{fHigh=!fHigh;bH.setAttribute('aria-pressed',String(fHigh));apply();};
+document.getElementById('expand').onclick=()=>D.forEach((g,i)=>map.children[i].dataset.open='true');
+document.getElementById('collapse').onclick=()=>D.forEach((g,i)=>map.children[i].dataset.open='false');
+
+/* open the two highest-leverage lines on load */
+map.children[1].dataset.open='true';
+</script>
+</body>
+</html>
