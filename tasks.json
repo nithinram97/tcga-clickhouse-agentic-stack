@@ -1,0 +1,98 @@
+{
+  // AI loop with Gemini chat. Run from the Command Palette ("Tasks: Run Task") or the keybindings.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "AI: Start task",
+      "detail": "Pack the repo around the open file and copy the first prompt",
+      "type": "shell",
+      "command": "npx",
+      "windows": { "command": "npx.cmd" },
+      "args": ["tsx", "tools/ai/ai.ts", "start", "${relativeFile}"],
+      "options": { "env": { "AI_TASK": "${input:aiTask}" } },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true, "focus": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "AI: Start task (find files for me)",
+      "detail": "No open file needed: finds the files from the task's words, or lets Gemini locate them",
+      "type": "shell",
+      "command": "npx",
+      "windows": { "command": "npx.cmd" },
+      "args": ["tsx", "tools/ai/ai.ts", "start"],
+      "options": { "env": { "AI_TASK": "${input:aiTask}" } },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true, "focus": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "AI: Start task (plan first)",
+      "detail": "Same, but Gemini replies with a plan before editing",
+      "type": "shell",
+      "command": "npx",
+      "windows": { "command": "npx.cmd" },
+      "args": ["tsx", "tools/ai/ai.ts", "start", "${relativeFile}", "--plan"],
+      "options": { "env": { "AI_TASK": "${input:aiTask}" } },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true, "focus": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "AI: Next",
+      "detail": "Apply Gemini's reply from the clipboard, run checks, copy the next prompt",
+      "type": "shell",
+      "command": "npx",
+      "windows": { "command": "npx.cmd" },
+      "args": ["tsx", "tools/ai/ai.ts", "next"],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true, "focus": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "AI: Next (reply from .ai/reply.md)",
+      "type": "shell",
+      "command": "npx",
+      "windows": { "command": "npx.cmd" },
+      "args": ["tsx", "tools/ai/ai.ts", "next", "--file"],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true, "focus": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "AI: Repack (new chat)",
+      "detail": "Fresh pack including everything touched so far",
+      "type": "shell",
+      "command": "npx",
+      "windows": { "command": "npx.cmd" },
+      "args": ["tsx", "tools/ai/ai.ts", "repack"],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true, "focus": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "AI: Status",
+      "type": "shell",
+      "command": "npx",
+      "windows": { "command": "npx.cmd" },
+      "args": ["tsx", "tools/ai/ai.ts", "status"],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "AI: Done",
+      "type": "shell",
+      "command": "npx",
+      "windows": { "command": "npx.cmd" },
+      "args": ["tsx", "tools/ai/ai.ts", "done"],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "AI: Copy Gem instructions",
+      "type": "shell",
+      "command": "npx",
+      "windows": { "command": "npx.cmd" },
+      "args": ["tsx", "tools/ai/ai.ts", "gem"],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    { "id": "aiTask", "type": "promptString", "description": "What should the AI do? (e.g. Add a severity filter to the risk table)" }
+  ]
+}
