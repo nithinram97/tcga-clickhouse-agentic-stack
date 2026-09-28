@@ -1,0 +1,28 @@
+{
+  "name": "text-to-qr",
+  "version": "2.0.0",
+  "description": "Pack a large text file into static or animated (fountain-coded) QR codes and restore it",
+  "type": "module",
+  "bin": { "text-to-qr": "./text-to-qr.ts" },
+  "scripts": {
+    "split": "tsx text-to-qr.ts split",
+    "animate": "tsx text-to-qr.ts animate",
+    "join": "tsx text-to-qr.ts join",
+    "typecheck": "tsc --noEmit --strict --module nodenext --moduleResolution nodenext --target es2022 --esModuleInterop --skipLibCheck text-to-qr.ts"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "jsqr": "^1.4.0",
+    "omggif": "^1.0.10",
+    "pngjs": "^7.0.0",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/omggif": "^1.0.5",
+    "@types/pngjs": "^6.0.5",
+    "@types/qrcode": "^1.5.6",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
