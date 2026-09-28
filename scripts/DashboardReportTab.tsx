@@ -36,9 +36,9 @@ import {
   resolveMitigationColumns,
   resolveRiskTableColumns,
 } from '../../utils/reportPrintUtils';
-import { FitToBox, ReportPage, type ReportMeta } from './report/ReportPrimitives';
+import { ReportPage, type ReportMeta } from './report/ReportPrimitives';
 import { PrintMatrix } from './report/PrintMatrix';
-import { ActionTrackerSection, RiskMetricsSection, RiskTableSection } from './report/PrintTables';
+import { RiskMetricsSection, RiskTableSection } from './report/PrintTables';
 import { PrintOnePager } from './report/PrintOnePager';
 import { RICH_HTML_CLASSES } from './report/reportStyles';
 
@@ -63,8 +63,8 @@ export interface ReportSectionConfig {
 
 const DEFAULT_SECTIONS: ReportSectionConfig[] = [
   { key: 'execSummary', label: 'Exec Summary', visible: true },
-  { key: 'heatmap', label: 'Heatmap + Action Tracker', visible: true },
-  { key: 'coldmap', label: 'Coldmap + Action Tracker', visible: true },
+  { key: 'heatmap', label: 'Heatmap', visible: true },
+  { key: 'coldmap', label: 'Coldmap', visible: true },
   { key: 'risksTable', label: 'Risks Table', visible: true },
   { key: 'opportunitiesTable', label: 'Opportunities Table', visible: true },
   { key: 'riskMetrics', label: 'Risk Metrics', visible: true },
@@ -190,18 +190,6 @@ export const DashboardReportTab: React.FC<{ dashboardId: string }> = ({ dashboar
   }, [armRoPayload, settings, idByPk]);
   const actionColumns = useMemo(() => resolveMitigationColumns(settings), [settings]);
   const actionCellValues = useMemo(() => readCellValues(asObj(settings.action_tracker_table).value), [settings]);
-  const parentIdFor = useCallback(
-    (a: Parameters<typeof getActionParentPk>[0]) => idByPk.get(getActionParentPk(a)) || String(getActionParentPk(a)),
-    [idByPk],
-  );
-
-  const { riskActions, oppActions } = useMemo(() => {
-    const oppPks = new Set(opps.map(getRowPk));
-    return {
-      riskActions: actions.filter((a) => !oppPks.has(getActionParentPk(a))),
-      oppActions: actions.filter((a) => oppPks.has(getActionParentPk(a))),
-    };
-  }, [actions, opps]);
 
   const onePagerRows = useMemo(
     () => [...risks, ...opps].filter((r) => !excludedPks.has(getRowPk(r))),
@@ -360,7 +348,7 @@ export const DashboardReportTab: React.FC<{ dashboardId: string }> = ({ dashboar
 
       case 'heatmap':
         if (risks.length === 0) return null;
-        return [
+        return (
           <ReportPage key="heatmap" meta={meta} heading="Heatmap" headingRight={<CountTag n={risks.length} noun="risk" />}>
             <PrintMatrix
               type="Risk"
@@ -370,22 +358,12 @@ export const DashboardReportTab: React.FC<{ dashboardId: string }> = ({ dashboar
               assumptionHtml={summary?.assumptionHtml}
               assumptionDate={assumptionDate}
             />
-          </ReportPage>,
-          <ActionTrackerSection
-            key="heatmap-actions"
-            meta={meta}
-            title="Action Tracker – Risks"
-            actions={riskActions}
-            columns={actionColumns}
-            cellValues={actionCellValues}
-            parentIdFor={parentIdFor}
-            maxRowsPerPage={rowsPerPage}
-          />,
-        ];
+          </ReportPage>
+        );
 
       case 'coldmap':
         if (opps.length === 0) return null;
-        return [
+        return (
           <ReportPage key="coldmap" meta={meta} heading="Coldmap" headingRight={<CountTag n={opps.length} noun="opportunity" />}>
             <PrintMatrix
               type="Opportunity"
@@ -395,18 +373,8 @@ export const DashboardReportTab: React.FC<{ dashboardId: string }> = ({ dashboar
               assumptionHtml={summary?.assumptionHtml}
               assumptionDate={assumptionDate}
             />
-          </ReportPage>,
-          <ActionTrackerSection
-            key="coldmap-actions"
-            meta={meta}
-            title="Action Tracker – Opportunities"
-            actions={oppActions}
-            columns={actionColumns}
-            cellValues={actionCellValues}
-            parentIdFor={parentIdFor}
-            maxRowsPerPage={rowsPerPage}
-          />,
-        ];
+          </ReportPage>
+        );
 
       case 'risksTable':
         return (
