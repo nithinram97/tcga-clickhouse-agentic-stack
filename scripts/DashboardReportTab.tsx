@@ -1,13 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
-  ArrowDown,
-  ArrowUp,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
   Eye,
   EyeOff,
+  GripVertical,
   Loader2,
   Printer,
   Save,
@@ -53,7 +52,6 @@ export type ReportSectionKey =
   | 'coldmap'
   | 'risksTable'
   | 'opportunitiesTable'
-  | 'actionTracker'
   | 'riskMetrics'
   | 'onePagers';
 
@@ -65,11 +63,10 @@ export interface ReportSectionConfig {
 
 const DEFAULT_SECTIONS: ReportSectionConfig[] = [
   { key: 'execSummary', label: 'Exec Summary', visible: true },
-  { key: 'heatmap', label: 'Heatmap', visible: true },
-  { key: 'coldmap', label: 'Coldmap', visible: true },
+  { key: 'heatmap', label: 'Heatmap + Action Tracker', visible: true },
+  { key: 'coldmap', label: 'Coldmap + Action Tracker', visible: true },
   { key: 'risksTable', label: 'Risks Table', visible: true },
   { key: 'opportunitiesTable', label: 'Opportunities Table', visible: true },
-  { key: 'actionTracker', label: 'Action Tracker', visible: true },
   { key: 'riskMetrics', label: 'Risk Metrics', visible: true },
   { key: 'onePagers', label: 'OnePagers', visible: true },
 ];
@@ -198,6 +195,14 @@ export const DashboardReportTab: React.FC<{ dashboardId: string }> = ({ dashboar
     [idByPk],
   );
 
+  const { riskActions, oppActions } = useMemo(() => {
+    const oppPks = new Set(opps.map(getRowPk));
+    return {
+      riskActions: actions.filter((a) => !oppPks.has(getActionParentPk(a))),
+      oppActions: actions.filter((a) => oppPks.has(getActionParentPk(a))),
+    };
+  }, [actions, opps]);
+
   const onePagerRows = useMemo(
     () => [...risks, ...opps].filter((r) => !excludedPks.has(getRowPk(r))),
     [risks, opps, excludedPks],
@@ -215,14 +220,31 @@ export const DashboardReportTab: React.FC<{ dashboardId: string }> = ({ dashboar
   const assumptionDate = summary?.assumptionDateDisplay || summary?.execSummaryDateDisplay || '';
 
   /* ---------- Sidebar actions ---------- */
-  const moveSection = (index: number, dir: -1 | 1) => {
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
+
+  /** `to` is the insertion slot (0..length) in the list before removal. */
+  const moveSection = (from: number, to: number) => {
     setSections((prev) => {
+      if (to === from || to === from + 1) return prev;
       const next = [...prev];
-      const t = index + dir;
-      if (t < 0 || t >= next.length) return prev;
-      [next[index], next[t]] = [next[t], next[index]];
+      const [item] = next.splice(from, 1);
+      next.splice(to > from ? to - 1 : to, 0, item);
       return next;
     });
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, idx: number) => {
+    if (dragIndex === null) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDropIndex(e.clientY < rect.top + rect.height / 2 ? idx : idx + 1);
+  };
+
+  const endDrag = () => {
+    setDragIndex(null);
+    setDropIndex(null);
   };
   const toggleSection = (key: ReportSectionKey) =>
     setSections((prev) => prev.map((s) => (s.key === key ? { ...s, visible: !s.visible } : s)));
@@ -338,7 +360,7 @@ export const DashboardReportTab: React.FC<{ dashboardId: string }> = ({ dashboar
 
       case 'heatmap':
         if (risks.length === 0) return null;
-        return (
+        return [
           <ReportPage key="heatmap" meta={meta} heading="Heatmap" headingRight={<CountTag n={risks.length} noun="risk" />}>
             <PrintMatrix
               type="Risk"
@@ -348,12 +370,22 @@ export const DashboardReportTab: React.FC<{ dashboardId: string }> = ({ dashboar
               assumptionHtml={summary?.assumptionHtml}
               assumptionDate={assumptionDate}
             />
-          </ReportPage>
-        );
+          </ReportPage>,
+          <ActionTrackerSection
+            key="heatmap-actions"
+            meta={meta}
+            title="Action Tracker – Risks"
+            actions={riskActions}
+            columns={actionColumns}
+            cellValues={actionCellValues}
+            parentIdFor={parentIdFor}
+            maxRowsPerPage={rowsPerPage}
+          />,
+        ];
 
       case 'coldmap':
         if (opps.length === 0) return null;
-        return (
+        return [
           <ReportPage key="coldmap" meta={meta} heading="Coldmap" headingRight={<CountTag n={opps.length} noun="opportunity" />}>
             <PrintMatrix
               type="Opportunity"
@@ -363,8 +395,18 @@ export const DashboardReportTab: React.FC<{ dashboardId: string }> = ({ dashboar
               assumptionHtml={summary?.assumptionHtml}
               assumptionDate={assumptionDate}
             />
-          </ReportPage>
-        );
+          </ReportPage>,
+          <ActionTrackerSection
+            key="coldmap-actions"
+            meta={meta}
+            title="Action Tracker – Opportunities"
+            actions={oppActions}
+            columns={actionColumns}
+            cellValues={actionCellValues}
+            parentIdFor={parentIdFor}
+            maxRowsPerPage={rowsPerPage}
+          />,
+        ];
 
       case 'risksTable':
         return (
@@ -391,19 +433,6 @@ export const DashboardReportTab: React.FC<{ dashboardId: string }> = ({ dashboar
             columns={riskColumns}
             cellValues={riskCellValues}
             includeChildren={includeChildren}
-            maxRowsPerPage={rowsPerPage}
-          />
-        );
-
-      case 'actionTracker':
-        return (
-          <ActionTrackerSection
-            key="actionTracker"
-            meta={meta}
-            actions={actions}
-            columns={actionColumns}
-            cellValues={actionCellValues}
-            parentIdFor={parentIdFor}
             maxRowsPerPage={rowsPerPage}
           />
         );
@@ -485,30 +514,48 @@ export const DashboardReportTab: React.FC<{ dashboardId: string }> = ({ dashboar
           {/* Sections */}
           <div className="space-y-2 border-t border-slate-200 pt-3">
             <SidebarLabel>Sections &amp; order</SidebarLabel>
-            <div className="space-y-1">
+            <p className="text-[10px] text-slate-400">Drag to reorder · click the eye to show or hide.</p>
+            <div className="space-y-1" onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropIndex(null);
+            }}>
               {sections.map((sec, idx) => (
                 <div
                   key={sec.key}
+                  draggable
+                  onDragStart={(e) => {
+                    setDragIndex(idx);
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', sec.key);
+                  }}
+                  onDragOver={(e) => handleDragOver(e, idx)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (dragIndex !== null && dropIndex !== null) moveSection(dragIndex, dropIndex);
+                    endDrag();
+                  }}
+                  onDragEnd={endDrag}
                   className={cn(
-                    'flex items-center justify-between rounded border p-2',
+                    'relative flex cursor-grab items-center gap-2 rounded border p-2 transition-colors active:cursor-grabbing',
                     sec.visible ? 'border-slate-200 bg-slate-50 text-slate-800' : 'border-transparent bg-slate-100/60 text-slate-400',
+                    dragIndex === idx && 'opacity-40',
                   )}
                 >
-                  <span className="flex-1 truncate pr-2 font-semibold">
+                  {/* Drop indicator */}
+                  {dragIndex !== null && dropIndex === idx && (
+                    <span className="pointer-events-none absolute -top-[3px] left-0 right-0 h-[2px] rounded bg-[#DA1884]" />
+                  )}
+                  {dragIndex !== null && idx === sections.length - 1 && dropIndex === sections.length && (
+                    <span className="pointer-events-none absolute -bottom-[3px] left-0 right-0 h-[2px] rounded bg-[#DA1884]" />
+                  )}
+
+                  <GripVertical className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  <span className="flex-1 truncate font-semibold">
                     {sec.label}
                     {sec.key === 'onePagers' && <span className="ml-1 font-mono font-normal text-slate-400">({onePagerRows.length})</span>}
                   </span>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <IconBtn disabled={idx === 0} onClick={() => moveSection(idx, -1)}>
-                      <ArrowUp className="h-3.5 w-3.5" />
-                    </IconBtn>
-                    <IconBtn disabled={idx === sections.length - 1} onClick={() => moveSection(idx, 1)}>
-                      <ArrowDown className="h-3.5 w-3.5" />
-                    </IconBtn>
-                    <IconBtn onClick={() => toggleSection(sec.key)}>
-                      {sec.visible ? <Eye className="h-3.5 w-3.5 text-airbus-blue" /> : <EyeOff className="h-3.5 w-3.5" />}
-                    </IconBtn>
-                  </div>
+                  <IconBtn onClick={() => toggleSection(sec.key)}>
+                    {sec.visible ? <Eye className="h-3.5 w-3.5 text-airbus-blue" /> : <EyeOff className="h-3.5 w-3.5" />}
+                  </IconBtn>
                 </div>
               ))}
             </div>

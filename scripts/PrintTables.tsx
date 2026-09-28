@@ -208,6 +208,7 @@ export const ActionTable: React.FC<{
 
 interface ActionTrackerSectionProps {
   meta: ReportMeta;
+  title?: string;
   actions: ActionRow[];
   columns: MitigationColumnDefinition[];
   cellValues: Record<string, string>;
@@ -217,6 +218,7 @@ interface ActionTrackerSectionProps {
 
 export const ActionTrackerSection: React.FC<ActionTrackerSectionProps> = ({
   meta,
+  title = 'Action Tracker',
   actions,
   columns,
   cellValues,
@@ -257,7 +259,7 @@ export const ActionTrackerSection: React.FC<ActionTrackerSectionProps> = ({
         probe={probe}
         bodyRef={bodyRef}
         fit={!probe}
-        heading={pageCount > 1 ? `Action Tracker (${pageIndex + 1}/${pageCount})` : 'Action Tracker'}
+        heading={pageCount > 1 ? `${title} (${pageIndex + 1}/${pageCount})` : title}
         headingRight={
           <span className="inline-flex items-center gap-[3mm] text-[8.5px] text-slate-600">
             <span className="inline-flex items-center gap-[1mm]">
