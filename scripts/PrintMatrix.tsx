@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { AlertTriangle, Target, Zap } from 'lucide-react';
 import { cn } from '../../../../@/lib/utils';
-import type { ArmRiskRow } from '../../../context/DashboardContext';
+import { useDashboardContext, type ArmRiskRow } from '../../../context/DashboardContext';
 import { getNewTopRiskCategory, getTrendConfig, isCriticalityDiffers } from '../../../utils/reportTableUtils';
 import {
   getMatrixCellId,
@@ -11,6 +11,7 @@ import {
   getRowTitle,
   isTopRiskRow,
 } from '../../../utils/reportPrintUtils';
+import { getRowLevel1, getSiglumColorMap, useSiglumColor } from '../../../utils/siglumColors';
 import { RICH_HTML_CLASSES } from './reportStyles';
 
 export type MatrixType = 'Risk' | 'Opportunity';
@@ -48,7 +49,7 @@ export const PrintRiskPill: React.FC<{ risk: ArmRiskRow; displayMode: 'Id' | 'Ti
   const topCat = getNewTopRiskCategory(risk);
   const isTop = isTopRiskRow(risk);
   const occurred = String(risk.riskstatus || '').toLowerCase().includes('occurred');
-  const levelColor = risk.color_level1 && risk.color_level1 !== 'transparent' ? risk.color_level1 : null;
+  const levelColor = useSiglumColor(risk);
   const trend = getTrendConfig(risk.Trend);
 
   return (
@@ -78,7 +79,7 @@ export const PrintRiskPill: React.FC<{ risk: ArmRiskRow; displayMode: 'Id' | 'Ti
   );
 };
 
-export const MatrixLegend: React.FC<{ type: MatrixType }> = ({ type }) => {
+export const MatrixLegend: React.FC<{ type: MatrixType; siglums?: { siglum: string; color: string }[] }> = ({ type, siglums = [] }) => {
   const noun = type === 'Risk' ? 'Risk' : 'Opportunity';
   return (
     <div className="flex flex-wrap items-center gap-x-[5mm] gap-y-[1mm] text-[8.5px] text-slate-700">
@@ -98,6 +99,17 @@ export const MatrixLegend: React.FC<{ type: MatrixType }> = ({ type }) => {
       <span className="inline-flex items-center gap-[1mm]">
         <span className="rounded-full border border-[#00205B] px-[1.2mm] font-mono text-[7px] font-bold">ID</span> Top {noun}
       </span>
+      {siglums.length > 0 && (
+        <span className="inline-flex flex-wrap items-center gap-x-[2mm] gap-y-[0.5mm] border-l border-slate-300 pl-[3mm]">
+          <span className="font-semibold text-slate-500">Siglum:</span>
+          {siglums.map((s) => (
+            <span key={s.siglum} className="inline-flex items-center gap-[0.8mm]">
+              <span className="h-[2.2mm] w-[2.2mm] rounded-full" style={{ backgroundColor: s.color }} />
+              {s.siglum}
+            </span>
+          ))}
+        </span>
+      )}
     </div>
   );
 };
@@ -140,6 +152,16 @@ export const PrintMatrix: React.FC<PrintMatrixProps> = ({
 
   const hasComments = Boolean(commentsHtml?.trim() || assumptionHtml?.trim());
 
+  // Same siglum colours as the Heatmap tab (dashboard-wide map)
+  const { allRiskRows } = useDashboardContext();
+  const siglumKey = useMemo(() => {
+    const colors = getSiglumColorMap(allRiskRows);
+    const present = new Set(rows.map(getRowLevel1).filter(Boolean));
+    return Array.from(present)
+      .sort((a, b) => a.localeCompare(b))
+      .map((siglum) => ({ siglum, color: colors.get(siglum) ?? '#9AA5BB' }));
+  }, [allRiskRows, rows]);
+
   const yLabels = (
     <div className="grid w-[5mm] shrink-0" style={{ gridTemplateRows: 'repeat(4, minmax(0, 1fr))' }}>
       {PROBABILITY_LABELS.map((l) => (
@@ -156,7 +178,7 @@ export const PrintMatrix: React.FC<PrintMatrixProps> = ({
 
   return (
     <div className="flex w-full flex-col gap-[2mm]">
-      <MatrixLegend type={type} />
+      <MatrixLegend type={type} siglums={siglumKey} />
 
       <div className="flex w-full gap-[1mm]">
         {!isOpp && yLabels}
