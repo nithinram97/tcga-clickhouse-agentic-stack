@@ -9,6 +9,7 @@ import {
   getRowDisplayId,
   getRowPk,
   getRowTitle,
+  isTopRiskRow,
 } from '../../../utils/reportPrintUtils';
 import { RICH_HTML_CLASSES } from './reportStyles';
 
@@ -45,8 +46,7 @@ export const PrintRiskPill: React.FC<{ risk: ArmRiskRow; displayMode: 'Id' | 'Ti
   size = 'sm',
 }) => {
   const topCat = getNewTopRiskCategory(risk);
-  const isTop =
-    Number(risk.risktoprisk) === 1 || risk.is_top_risk === true || Boolean(risk.css_toprisk?.includes('toprisk'));
+  const isTop = isTopRiskRow(risk);
   const occurred = String(risk.riskstatus || '').toLowerCase().includes('occurred');
   const levelColor = risk.color_level1 && risk.color_level1 !== 'transparent' ? risk.color_level1 : null;
   const trend = getTrendConfig(risk.Trend);
