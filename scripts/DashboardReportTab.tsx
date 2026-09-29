@@ -8,7 +8,9 @@ import {
   EyeOff,
   GripVertical,
   Loader2,
+  MonitorPlay,
   Printer,
+  Search,
   Save,
   Settings,
 } from 'lucide-react';
@@ -42,6 +44,7 @@ import { PrintMatrix } from './report/PrintMatrix';
 import { RiskMetricsSection, RiskTableSection } from './report/PrintTables';
 import { PrintOnePager } from './report/PrintOnePager';
 import { RICH_HTML_CLASSES } from './report/reportStyles';
+import { SLIDESHOW_CSS, SlideshowControls, useReportSlideshow } from './report/ReportSlideshow';
 
 /* ------------------------------------------------------------------ */
 /* Section model                                                       */
@@ -318,6 +321,9 @@ export const DashboardReportTab: React.FC<{ dashboardId: string }> = ({ dashboar
     refetchPayload,
   ]);
 
+  /* ---------- Slideshow ---------- */
+  const slideshow = useReportSlideshow();
+
   /* ---------- Print ---------- */
   const handlePrint = () => {
     const previousTitle = document.title;
@@ -436,7 +442,7 @@ export const DashboardReportTab: React.FC<{ dashboardId: string }> = ({ dashboar
 
   return (
     <div className="flex h-full w-full flex-1 overflow-hidden bg-slate-200">
-      <style>{REPORT_CSS}</style>
+      <style>{REPORT_CSS + SLIDESHOW_CSS}</style>
 
       {/* ------------------------------ SIDEBAR ------------------------------ */}
       <aside className="flex h-full w-80 shrink-0 select-none flex-col border-r border-slate-300 bg-white">
@@ -563,6 +569,14 @@ export const DashboardReportTab: React.FC<{ dashboardId: string }> = ({ dashboar
           )}
           <Button
             type="button"
+            variant="outline"
+            onClick={slideshow.start}
+            className="flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded border-airbus-navy text-xs font-bold text-airbus-navy hover:bg-slate-50"
+          >
+            <MonitorPlay className="h-4 w-4" /> Slideshow
+          </Button>
+          <Button
+            type="button"
             onClick={handlePrint}
             className="flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded bg-[#DA1884] text-xs font-bold text-white shadow-sm hover:bg-[#b0136a]"
           >
@@ -576,13 +590,18 @@ export const DashboardReportTab: React.FC<{ dashboardId: string }> = ({ dashboar
       </aside>
 
       {/* ------------------------------ PREVIEW ------------------------------ */}
-      <main className="report-preview min-w-0 flex-1 overflow-auto p-8">
+      <main
+        ref={slideshow.stageRef}
+        className={cn('report-preview min-w-0 flex-1 overflow-auto p-8', slideshow.active && 'report-slideshow')}
+        style={{ '--slide-scale': slideshow.scale } as React.CSSProperties}
+      >
+        {slideshow.active && <SlideshowControls show={slideshow} title={printTitle} />}
         {isLoadingSummary && (
-          <div className="mx-auto mb-4 flex w-max items-center gap-2 rounded bg-white px-3 py-1.5 text-xs text-slate-600 shadow-sm">
+          <div className="report-slideshow-hide mx-auto mb-4 flex w-max items-center gap-2 rounded bg-white px-3 py-1.5 text-xs text-slate-600 shadow-sm">
             <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading executive summary…
           </div>
         )}
-        <div className="report-print-area mx-auto w-max">
+        <div ref={slideshow.areaRef} className="report-print-area mx-auto w-max">
           {showCover && <CoverPage meta={meta} />}
           {sections.filter((s) => s.visible).map((s) => (
             <React.Fragment key={s.key}>{renderSection(s)}</React.Fragment>
@@ -727,7 +746,42 @@ const OnePagerPicker: React.FC<{
   onBulk: (rows: ArmRiskRow[], mode: 'all' | 'none' | 'top') => void;
 }> = ({ label, rows, excluded, onToggle, onBulk }) => {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+
+  // Checked items float to the top (stable sort keeps the original order inside each group)
+  const { checkedRows, uncheckedRows } = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const match = (r: ArmRiskRow) =>
+      !q || getRowDisplayId(r).toLowerCase().includes(q) || getRowTitle(r).toLowerCase().includes(q);
+    const visible = rows.filter(match);
+    return {
+      checkedRows: visible.filter((r) => !excluded.has(getRowPk(r))),
+      uncheckedRows: visible.filter((r) => excluded.has(getRowPk(r))),
+    };
+  }, [rows, excluded, query]);
+
   const selected = rows.filter((r) => !excluded.has(getRowPk(r))).length;
+
+  const renderItem = (r: ArmRiskRow) => {
+    const pk = getRowPk(r);
+    const checked = !excluded.has(pk);
+    return (
+      <label
+        key={pk}
+        className={cn('flex cursor-pointer items-start gap-2 rounded p-1.5 hover:bg-slate-50', checked && 'bg-blue-50/60')}
+      >
+        <Checkbox checked={checked} onCheckedChange={() => onToggle(pk)} className="mt-0.5" />
+        <span className="min-w-0">
+          <span className="font-mono font-bold text-slate-700">{getRowDisplayId(r)}</span>
+          <span className="block truncate text-[10px] text-slate-500">{getRowTitle(r)}</span>
+        </span>
+      </label>
+    );
+  };
+
+  const GroupLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <div className="px-1.5 pb-0.5 pt-1.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">{children}</div>
+  );
 
   return (
     <div className="overflow-hidden rounded border border-slate-200">
@@ -759,20 +813,30 @@ const OnePagerPicker: React.FC<{
               ))}
             </div>
           )}
-          <div className="max-h-56 space-y-0.5 overflow-y-auto p-1.5">
+          {rows.length > 5 && (
+            <div className="relative border-b border-slate-100 px-2 py-1.5">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search ID or title…"
+                className="h-7 w-full rounded border border-slate-200 pl-6 pr-2 text-[11px] outline-none focus:border-airbus-blue"
+              />
+            </div>
+          )}
+          <div className="max-h-64 space-y-0.5 overflow-y-auto p-1.5">
             {rows.length === 0 && <div className="p-2 text-center text-[11px] italic text-slate-400">None registered.</div>}
-            {rows.map((r) => {
-              const pk = getRowPk(r);
-              return (
-                <label key={pk} className="flex cursor-pointer items-start gap-2 rounded p-1.5 hover:bg-slate-50">
-                  <Checkbox checked={!excluded.has(pk)} onCheckedChange={() => onToggle(pk)} className="mt-0.5" />
-                  <span className="min-w-0">
-                    <span className="font-mono font-bold text-slate-700">{getRowDisplayId(r)}</span>
-                    <span className="block truncate text-[10px] text-slate-500">{getRowTitle(r)}</span>
-                  </span>
-                </label>
-              );
-            })}
+            {rows.length > 0 && checkedRows.length + uncheckedRows.length === 0 && (
+              <div className="p-2 text-center text-[11px] italic text-slate-400">No match.</div>
+            )}
+            {checkedRows.length > 0 && uncheckedRows.length > 0 && <GroupLabel>Selected ({checkedRows.length})</GroupLabel>}
+            {checkedRows.map(renderItem)}
+            {checkedRows.length > 0 && uncheckedRows.length > 0 && (
+              <div className="border-t border-slate-100 pt-0.5">
+                <GroupLabel>Not selected ({uncheckedRows.length})</GroupLabel>
+              </div>
+            )}
+            {uncheckedRows.map(renderItem)}
           </div>
         </div>
       )}
