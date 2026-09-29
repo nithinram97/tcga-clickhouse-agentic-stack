@@ -29,6 +29,7 @@ import {
   getRowPk,
   getRowTitle,
   isOpportunityRow,
+  isTopRiskRow,
   parseDashboardSettings,
   parseJsonObject,
   parseOnePagerPrintConfig,
@@ -250,8 +251,7 @@ export const DashboardReportTab: React.FC<{ dashboardId: string }> = ({ dashboar
       const next = new Set(prev);
       rows.forEach((r) => {
         const pk = getRowPk(r);
-        const isTop = Number(r.risktoprisk) === 1 || r.is_top_risk === true;
-        const include = mode === 'all' || (mode === 'top' && isTop);
+        const include = mode === 'all' || (mode === 'top' && isTopRiskRow(r));
         if (include) next.delete(pk);
         else next.add(pk);
       });
