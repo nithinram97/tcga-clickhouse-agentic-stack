@@ -68,6 +68,14 @@ export const getRowPk = (row: ArmRiskRow): number =>
 export const getRowDisplayId = (row: ArmRiskRow): string =>
   String(row.riskid_raw || row.pk_impact_id || row.PKImpactID || row.primary_key || '');
 
+/** Same rule as RiskFilter / Table tab: risktoprisk flag (any truthy form) or a 'toprisk' css class. */
+export const isTopRiskRow = (row: ArmRiskRow): boolean => {
+  const flag = row.risktoprisk as unknown;
+  const flagSet =
+    flag === true || (flag != null && flag !== '' && !['0', 'false', 'no'].includes(String(flag).trim().toLowerCase()) && Boolean(flag));
+  return flagSet || row.is_top_risk === true || Boolean(row.css_toprisk?.includes('toprisk'));
+};
+
 export const getRowTitle = (row: ArmRiskRow): string => String(row.risktitle || row.arm_title || '');
 
 /** Same bucketing as the Maps tab (useDashboardMapsTab): |score| rounded, 0 = unscored. */
