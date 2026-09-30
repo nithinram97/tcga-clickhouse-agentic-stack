@@ -43,6 +43,27 @@ type ActionType = "add" | "edit" | "duplicate" | "create_iteration";
 const CREATION_ACTIONS: ActionType[] = ["add", "duplicate", "create_iteration"];
 const IN_CHUNK = 500;
 
+/**
+ * Officer siglums on ErmCockpitUser (there is no "siglum" property).
+ * An officer covers a dashboard when one of the dashboard's siglums
+ *   - equals their 1-letter or 2-letter siglum (e.g. "H" or "HQ"), or
+ *   - is a sub-siglum of their 2-letter siglum (e.g. "HQX" under "HQ") when OFFICER_COVERS_SUB_SIGLUMS.
+ */
+const OFFICER_SIGLUM_1 = "userSiglum1letter";
+const OFFICER_SIGLUM_2 = "userSiglum2letter";
+const OFFICER_COVERS_SUB_SIGLUMS = true;
+
+const norm = (v: unknown): string => (typeof v === "string" ? v.trim().toUpperCase() : "");
+
+function officerCoversSiglum(user: any, siglum: string): boolean {
+    const target = norm(siglum);
+    if (!target) return false;
+    const s1 = norm(user?.[OFFICER_SIGLUM_1]);
+    const s2 = norm(user?.[OFFICER_SIGLUM_2]);
+    if (target === s1 || target === s2) return true;
+    return OFFICER_COVERS_SUB_SIGLUMS && s2.length === 2 && target.startsWith(s2);
+}
+
 const lower = (list: readonly (string | undefined | null)[] | undefined): string[] =>
     (list || []).filter((s): s is string => Boolean(s)).map(s => s.trim().toLowerCase());
 
@@ -74,13 +95,15 @@ async function fetchAllIn(client: Client, type: any, prop: string, values: unkno
     return parts.flat();
 }
 
+/**
+ * Same lookup as the previous (working) implementation: filter on version / iteration server-side,
+ * compare creationDate in memory (works whether it is stored as a timestamp or an ISO string).
+ * All pages are read, so the match is not missed when many dashboards share V1.1.
+ */
 async function findDashboard(client: Client, type: any, creationDateIso: string, version: number, iteration: number): Promise<any | undefined> {
-    const found = await fetchAll(client(type).where({
-        creationDate: creationDateIso,
-        boardVersion: version,
-        boardIteration: iteration,
-    }));
-    return found[0];
+    const targetMs = new Date(creationDateIso).getTime();
+    const candidates = await fetchAll(client(type).where({ boardVersion: version, boardIteration: iteration }));
+    return candidates.find((d: any) => d.creationDate && new Date(d.creationDate).getTime() === targetMs);
 }
 
 function cascadePermissions(currentList: string[] | undefined, toAdd: string[], toRemove: Set<string>): string[] {
@@ -172,17 +195,17 @@ export default async function executeAddEditWorkflow(
         // Officers: stored ones + officers of the (stored, or requested for new dashboards) siglums.
         const roleSource = action === "edit" ? targetBoard : sourceBoard;
         const siglums = Array.from(new Set([...(ownerDashboard || []), ...((roleSource?.ownerDashboard as string[]) || [])]));
+        // Only filter server-side on userAppProfile (known to exist); match siglums in memory.
         const officerUsers = siglums.length > 0
-            ? await fetchAllIn(client, ErmCockpitUser, "siglum", siglums, { userAppProfile: "Officer" })
+            ? await fetchAll(client(ErmCockpitUser).where({ userAppProfile: "Officer" }))
             : [];
-        const officersForRequestedSiglums = officerUsers
-            .filter((u: any) => u.siglum && (ownerDashboard || []).includes(u.siglum))
-            .map((u: any) => u.userIdentifier as string)
-            .filter(Boolean);
-        const officersForStoredSiglums = officerUsers
-            .filter((u: any) => u.siglum && ((roleSource?.ownerDashboard as string[]) || []).includes(u.siglum))
-            .map((u: any) => u.userIdentifier as string)
-            .filter(Boolean);
+        const officersFor = (wanted: string[]) =>
+            officerUsers
+                .filter((u: any) => wanted.some(sg => officerCoversSiglum(u, sg)))
+                .map((u: any) => u.userIdentifier as string)
+                .filter(Boolean);
+        const officersForRequestedSiglums = officersFor(ownerDashboard || []);
+        const officersForStoredSiglums = officersFor((roleSource?.ownerDashboard as string[]) || []);
 
         // ==========================================
         // PHASE 2: AUTHORISATION (from STORED roles)
