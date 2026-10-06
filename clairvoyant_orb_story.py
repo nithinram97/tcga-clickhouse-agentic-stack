@@ -1,44 +1,39 @@
 """
-Clairvoyant: "Orb chases the spark"  (Blender animation script)
-===============================================================
+Clairvoyant: "Orb chases the spark"  (Blender animation script, v2)
+===================================================================
 
 HOW TO RUN
-  1. Open Blender 4.2 or newer (tested on 5.2). Start a NEW General file.
-  2. Switch to the "Scripting" workspace tab at the top.
-  3. In the Text Editor: Text > Open... > pick this file (or New, then paste it in).
-  4. Click "Run Script" (the play button), or press Alt+P with the mouse over the text.
+  1. Open Blender 4.2 or newer (tested on 5.2). Start a NEW General file and
+     save it somewhere (the video is written next to the .blend).
+  2. Scripting tab > Text > Open... > pick this file > Run Script (or Alt+P).
      The scene is wiped and rebuilt (about 10-30 s).
-  5. Switch back to the "Layout" tab. In the 3D viewport press Numpad 0 for the
-     camera view, set the viewport shading to Rendered (Z > Rendered), and press
-     Space to play. Playback is slow in Rendered mode; Solid mode plays smoothly.
-  6. To render the film: Render > Render Animation (Ctrl+F12). The MP4 is written
-     next to your saved .blend file (save the .blend first), named clairvoyant_orb_*.mp4.
-     Render a single frame with F12 to check a moment.
-  Headless: blender -b -P clairvoyant_orb_story.py -a
+  3. Back in Layout, look through the camera: View > Cameras > Active Camera
+     (or the camera icon at the top right of the viewport).
+  4. See it properly: switch viewport shading to Rendered (Z > Rendered, or the
+     4th sphere icon), and in the shading dropdown set Compositor to "Always"
+     for the glow. Solid mode only shows grey shapes.
+  5. F12 renders one frame. Ctrl+F12 renders the MP4 (clairvoyant_orb_*.mp4).
+  Draft quickly: set RENDER_SAMPLES = 16 and RES_X, RES_Y = 1280, 720 below.
 
-TIPS
-  * Draft quickly: set RENDER_SAMPLES = 16 and RES_X, RES_Y = 1280, 720 below.
-  * Change the tagline (or set TAGLINE = "" to remove it) below.
-  * Each story beat's start frame is a constant (F_POP, F_CHASE ... F_TITLE) in
-    the STORY section, so you can retime a beat in one place.
-
-STORY (500 frames @ 30 fps, about 16.5 s)
-  001  Idle: Orb's antenna tip starts to twitch.
-  032  The tip pops off and flies away, drawing an amber line chart behind it.
-  062  The chase: Orb waddle-hops after it.
-  100  He climbs the bars. The chart IS the logo's four KPI bars, at 12x scale.
-  160  The stumble: the last step is the biggest; he falls short and dangles.
-  212  The edge: on the amber bar, the spark is out in the void past the chart.
-  252  Foresight: he closes his eyes, glows, a dashed forecast line projects
-       to where the spark WILL be.
-  300  Leap of faith along the forecast line.
-  330  The catch: the spark snaps back onto his antenna; the dashes become the
-       solid breakout line.
-  348  The reveal: the open C ring draws around the chart, the bars turn white,
-       and the whole thing rises out of the floor as the V stand and groundline
-       emerge. The chase drew the logo.
-  412  Orb melts into the breakout point.
-  440  The official CLAIRVOYANT wordmark (Michroma outlines, embedded) and tagline.
+STORY (560 frames @ 30 fps, about 18.7 s). Beat frames are the F_* constants.
+  001  Idle: Orb's antenna tip twitches.
+  032  The tip pops off and flies away, drawing a line chart that only ever rises.
+       The bars grow out of the floor as the line passes over them.
+  062  The chase: Orb runs after it.
+  100  He climbs the bars (the logo's four KPI bars at 12x), feeling every jump:
+       psych up, strain, brace for impact, relief.
+  188  The biggest step: he lands right on the edge of the amber bar and teeters.
+  226  On top, the spark is slowly drawing the breakout line upward, out of reach.
+       He jumps for it, falls well short, slumps.
+  262  Foresight: eyes closed, he glows; forecast dashes project ahead of the line.
+  294  He outruns the line: leaps over the spark and hops along the forecast dashes
+       to the end, then turns and waits, bouncing.
+  345  The spark reaches him and snaps back on: happy eyes, grin, sparkles, a
+       spinning jump for joy.
+  400  The reveal: the C ring draws round the chart and everything rises as the
+       V stand and groundline emerge. He looks down at what he drew.
+  464  Orb melts into the breakout point.
+  492  The official CLAIRVOYANT wordmark (Michroma outlines, embedded) and tagline.
 """
 
 import bpy
@@ -51,7 +46,7 @@ from mathutils import Vector, Matrix
 # Settings you may want to change
 # --------------------------------------------------------------------------
 FPS = 30
-FRAME_END = 500
+FRAME_END = 560
 TAGLINE = "We don\u2019t chase the number. We see where it\u2019s going."   # set to "" to drop it
 RES_X, RES_Y = 1920, 1080
 RENDER_SAMPLES = 64
@@ -636,30 +631,50 @@ def letter_curve(name, ch, em, mat, parent):
 # ==========================================================================
 # THE STORY
 # ==========================================================================
-# Key points in logo-root space (metres). The chart = the logo's four bars.
+# Key points in story-root space (metres). The chart = the logo's four bars.
 BAR_X = [LX(163), LX(179), LX(195), LX(211)]          # bar centres
 BAR_TOP = [LZ(132), LZ(124), LZ(116), LZ(106)]       # bar tops (last = amber)
 BREAK_A = Vector((LX(211), 0, LZ(106)))             # breakout line start (amber bar top)
-DOT = Vector((LX(258), 0, LZ(87)))                  # breakout point = where Orb catches the spark
+DOT = Vector((LX(258), 0, LZ(87)))                  # breakout point
 ORB_CENTRE = (0.85 + 1.0) * ORB_SCALE               # body centre height above Orb's feet
-START_X = -8.0
+START_X = -8.2
+LINE_R = 1.5 * S_LOGO                               # breakout line tube radius
+DASH_R = 0.09
 
-# Beat frames (30 fps)
-F_POP = 32          # antenna tip pops off
-F_CHASE = 62
-F_CLIMB = 100
-F_STUMBLE = 160
-F_EDGE = 212
-F_FORESIGHT = 252
-F_LEAP = 300
-F_CATCH = 330
-F_REVEAL = 348
-F_MELT = 412
-F_TITLE = 440
+# Beat frames (30 fps). Change these to retime the film.
+F_POP = 32           # antenna tip pops off and starts drawing the line
+F_CHASE = 62         # Orb runs after it
+F_CLIMB = 100        # first jump onto a bar
+F_TEETER = 188       # lands on the very edge of the amber bar
+F_EDGE = 226         # on top; the spark keeps climbing out of reach
+F_FORESIGHT = 262    # eyes close, forecast dashes project ahead of the spark
+F_LEAP = 294         # he outruns the line, hopping along the forecast
+F_CATCH = 345        # the spark reaches him and snaps back on
+F_REVEAL = 400       # the scene turns out to be the logo
+F_MELT = 464         # Orb melts into the breakout point
+F_TITLE = 492        # wordmark and tagline
+
+
+def line_pt(frac):
+    """Point on the breakout line (amber bar top -> breakout point)."""
+    return BREAK_A + (DOT - BREAK_A) * frac
+
+
+# How far the spark has drawn the breakout line, over time (only ever grows).
+SPARK_FRAC = [(150, 0.0), (200, 0.2), (230, 0.29), (260, 0.37), (294, 0.45), (308, 0.53),
+              (320, 0.63), (332, 0.76), (342, 0.95)]
+DASH_FRACS = [0.53, 0.62, 0.71, 0.80, 0.89, 0.98]   # forecast dashes = Orb's stepping stones
+
+
+def frame_for_frac(fr):
+    for (f0, a), (f1, b) in zip(SPARK_FRAC, SPARK_FRAC[1:]):
+        if a <= fr <= b:
+            return f0 + (f1 - f0) * (fr - a) / (b - a)
+    return SPARK_FRAC[-1][0]
 
 
 def linear_keys(on=True):
-    """New keyframes default to LINEAR while on (keeps the spark and its trail in sync)."""
+    """New keyframes default to LINEAR while on (keeps the spark and its line in sync)."""
     edit = bpy.context.preferences.edit
     if on:
         linear_keys.prev = edit.keyframe_new_interpolation_type
@@ -748,25 +763,72 @@ def build_logo_parts(root):
     return L
 
 
-def ring_shockwave(name, centre, frame, max_r, parent, plane="XZ"):
-    mat = emission(f"{name}_Mat", ICE, 0.0)
-    ob = curve_obj(name, circle_pts(1.0, 96, plane), 0.03, mat, parent=parent, cyclic=True)
-    ob.location = centre
-    s = mat.node_tree.nodes["Emission"].inputs["Strength"]
-    for f, r, e in ((1, 0.001, 0.0), (frame - 1, 0.001, 0.0), (frame, 0.2, 30.0), (frame + 24, max_r, 0.0)):
-        kf_vec(ob, "scale", f, (r, r, r))
-        kf_socket(s, f, e)
-    return ob
 
 
 # --------------------------------------------------------------------------
-# Orb choreography
+# Face rig: brows, mouth shapes and happy ^^ eyes on top of the base Orb
+# --------------------------------------------------------------------------
+def add_face_rig(orb):
+    body = orb["body"]
+    C, R = Vector((0, 0, 1.0)), 1.0
+    ink = principled("Orb_Ink", "#0B1118", rough=0.4)
+    tongue = principled("Orb_Tongue", "#E86A6A", rough=0.5)
+
+    def oriented_empty(name, az, el, inset=0.0):
+        p, n = surface_point(C, R, az, el, inset=inset)
+        e = new_empty(name, p, body, size=0.1)
+        e.rotation_mode = "QUATERNION"
+        e.rotation_quaternion = n.to_track_quat("-Y", "Z")
+        return e
+
+    # brows: a rotate-able bar above each eye
+    brows = {}
+    for side, az in (("L", -24), ("R", 24)):
+        base = oriented_empty(f"Orb_BrowBase_{side}", az, 41, inset=-0.005)
+        rot = new_empty(f"Orb_Brow_{side}", (0, 0, 0), base, size=0.08)
+        cylinder_between(f"Orb_BrowBar_{side}", (-0.15, -0.02, 0), (0.15, -0.02, 0), 0.04, ink, rot)
+        brows[side] = rot
+
+    # happy ^ eyes (hidden until needed)
+    happy = []
+    for side, az in (("L", -24), ("R", 24)):
+        base = oriented_empty(f"Orb_HappyEye_{side}", az, 14, inset=-0.01)
+        curve_obj(f"Orb_HappyEyeArc_{side}", [(-0.17, -0.02, -0.05), (0, -0.02, 0.12), (0.17, -0.02, -0.05)],
+                  0.04, ink, base, kind="NURBS")
+        base.scale = (0, 0, 0)
+        happy.append(base)
+
+    # mouths: smile (the base one), grin, "o", flat
+    mouth_base = oriented_empty("Orb_MouthBase", 0, -18, inset=0.02)
+    grin = new_empty("Orb_Mouth_Grin", (0, 0, 0), mouth_base, size=0.05)
+    sphere("Orb_Grin_Shape", 1.0, ink, grin, (0, 0, -0.02), (0.2, 0.05, 0.12), seg=32, rings=16)
+    sphere("Orb_Grin_Tongue", 1.0, tongue, grin, (0, -0.035, -0.07), (0.1, 0.03, 0.05), seg=24, rings=12)
+    oh = new_empty("Orb_Mouth_O", (0, 0, 0), mouth_base, size=0.05)
+    sphere("Orb_O_Shape", 1.0, ink, oh, (0, 0, -0.02), (0.075, 0.05, 0.095), seg=24, rings=12)
+    flat = new_empty("Orb_Mouth_Flat", (0, 0, 0), mouth_base, size=0.05)
+    cylinder_between("Orb_Flat_Shape", (-0.11, -0.03, -0.02), (0.11, -0.03, -0.02), 0.035, ink, flat)
+    mouths = {"smile": bpy.data.objects["Orb_Smile"], "grin": grin, "o": oh, "flat": flat}
+    for k, m in mouths.items():
+        m.scale = (1, 1, 1) if k == "smile" else (0, 0, 0)
+
+    orb.update(brows=brows, happy=happy, mouths=mouths,
+               blush_mat=bpy.data.materials["Orb_Blush"])
+
+
+# --------------------------------------------------------------------------
+# Choreography helpers
 # --------------------------------------------------------------------------
 class Choreo:
+    BROWS = {  # (slant degrees for the left brow, raise)
+        "neutral": (0, 0.0), "determined": (16, -0.02), "worried": (-18, 0.05),
+        "happy": (-6, 0.06), "surprised": (0, 0.09), "sad": (-14, 0.0)}
+
     def __init__(self, orb):
         self.o = orb
         self.root, self.body = orb["root"], orb["body"]
+        self.mouth_state = "smile"
 
+    # --- transforms --------------------------------------------------------
     def at(self, f, x, z):
         kf_vec(self.root, "location", f, (x, 0, z))
 
@@ -779,74 +841,153 @@ class Choreo:
     def squash(self, f, sxy, sz):
         kf_vec(self.body, "scale", f, (sxy, sxy, sz))
 
-    def hop(self, f0, f1, p0, p1, extra=0.8):
-        """Jump from p0=(x,z) at f0 to p1 at f1 with squash and stretch."""
-        mid = (f0 + f1) // 2
-        self.at(f0, *p0)
-        self.at(mid, (p0[0] + p1[0]) / 2, max(p0[1], p1[1]) + extra)
-        self.at(f1, *p1)
-        self.squash(f0 - 3, 1.15, 0.84)
-        self.squash(f0 + 2, 0.88, 1.18)
-        self.squash(mid, 0.97, 1.04)
-        self.squash(f1, 1.22, 0.78)
-        self.squash(f1 + 5, 1.0, 1.0)
-
+    # --- expression --------------------------------------------------------
     def look(self, f, x, z):
         for p in self.o["pupils"]:
             kf_vec(p, "location", f, (x, -0.06, z))
 
-    def eyes(self, f, sx, sz):
+    def eyes(self, f, kind="open"):
+        sx, sz, happy = {"open": (1, 1, 0), "wide": (1.22, 1.25, 0), "squint": (1.05, 0.62, 0),
+                         "closed": (1.08, 0.07, 0), "happy": (1, 0.0, 1)}[kind]
         for e in self.o["eyes"]:
             kf_vec(e, "scale", f, (sx, 1, sz))
+        for h in self.o["happy"]:
+            kf_vec(h, "scale", f, (happy, happy, happy))
 
-    def blink(self, f):
-        self.eyes(f, 1, 1)
-        self.eyes(f + 3, 1.05, 0.08)
-        self.eyes(f + 6, 1, 1)
+    def blink(self, f, after="open"):
+        self.eyes(f, after)
+        self.eyes(f + 2, "closed")
+        self.eyes(f + 5, after)
+
+    def brows(self, f, kind="neutral"):
+        slant, lift = self.BROWS[kind]
+        for side, sgn in (("L", 1), ("R", -1)):
+            b = self.o["brows"][side]
+            kf(b, "rotation_euler", f, math.radians(slant * sgn), index=1)
+            kf(b, "location", f, lift, index=2)
+
+    def mouth(self, f, kind):
+        if kind == self.mouth_state:
+            return
+        for k, m in self.o["mouths"].items():
+            on = 1.0 if k == self.mouth_state else 0.0
+            kf_vec(m, "scale", f - 1, (on, on, on))
+            on = 1.0 if k == kind else 0.0
+            kf_vec(m, "scale", f, (on, on, on))
+        self.mouth_state = kind
+
+    def expr(self, f, eyes=None, brows=None, mouth=None):
+        if eyes:
+            self.eyes(f, eyes)
+        if brows:
+            self.brows(f, brows)
+        if mouth:
+            self.mouth(f, mouth)
 
     def wobble(self, frames_angles):
         for f, a in frames_angles:
             kf(self.o["antenna"], "rotation_euler", f, math.radians(a), index=1)
 
+    # --- the jump ------------------------------------------------------------
+    def hop(self, f0, f1, p0, p1, height=0.8, crouch=5, feel=True, small=False):
+        """A real jump: crouch, parabolic flight at constant horizontal speed, impact squash.
+        p0/p1 are (x, z) of Orb's feet. f0 = take-off frame, f1 = landing frame."""
+        x0, z0 = p0
+        x1, z1 = p1
+        if small:     # quick running hop
+            self.squash(f0, 1.1, 0.9)
+            self.squash((f0 + f1) // 2, 0.94, 1.08)
+            self.squash(f1, 1.12, 0.88)
+        else:
+            self.squash(f0 - crouch, 1.0, 1.0)
+            self.squash(f0 - 1, 1.2, 0.78)            # anticipation crouch
+            self.squash(f0 + 2, 0.84, 1.22)           # stretch as he springs
+            self.squash((f0 + f1) // 2, 1.0, 1.0)     # weightless at the apex
+            self.squash(f1 - 1, 0.9, 1.12)            # stretch into the landing
+            self.squash(f1 + 1, 1.28, 0.72)           # impact
+            self.squash(f1 + 5, 0.94, 1.07)           # rebound
+            self.squash(f1 + 9, 1.0, 1.0)
+            self.at(f0 - crouch, x0, z0)
+            self.wobble([(f0 - 1, -12), (f0 + 3, 22), (f1 + 1, -24), (f1 + 5, 14), (f1 + 9, -6), (f1 + 13, 0)])
+        linear_keys(True)
+        n = f1 - f0
+        apex = max(z0, z1) + height
+        # solve a parabola through (0,z0), (tp,apex), (1,z1) with the apex nearer the higher end
+        a_ = math.sqrt(apex - z0)
+        b_ = math.sqrt(apex - z1)
+        tp = a_ / (a_ + b_)
+        for i in range(n + 1):
+            t = i / n
+            if t <= tp:
+                z = apex - (apex - z0) * ((tp - t) / tp) ** 2
+            else:
+                z = apex - (apex - z1) * ((t - tp) / (1 - tp)) ** 2
+            self.at(f0 + i, x0 + (x1 - x0) * t, z)
+        linear_keys(False)
+        if feel and not small:
+            # he feels it: gather himself, strain, brace, relief
+            self.expr(f0 - crouch, eyes="squint", brows="determined", mouth="flat")
+            self.expr(f0 + 2, eyes="wide", brows="surprised", mouth="o")
+            self.expr(f1 - 2, eyes="squint", brows="worried")
+            self.expr(f1 + 1, eyes="closed", mouth="flat")
+            self.expr(f1 + 7, eyes="open", brows="happy", mouth="smile")
 
+
+def sparkle_burst(name, centre, frame, parent, n=18):
+    import random
+    random.seed(11)
+    mats = [emission(f"{name}_Amber", AMBER, 25.0), emission(f"{name}_White", "#FFFFFF", 18.0)]
+    for i in range(n):
+        a = 2 * math.pi * i / n + random.uniform(-0.15, 0.15)
+        r = random.uniform(1.0, 2.2)
+        end = centre + Vector((r * math.cos(a), random.uniform(-0.4, 0.2), r * math.sin(a)))
+        s = sphere(f"{name}_{i:02d}", random.uniform(0.04, 0.08), mats[i % 2], parent, tuple(centre), seg=12, rings=6)
+        kf_vec(s, "scale", 1, (0, 0, 0))
+        kf_vec(s, "scale", frame - 1, (0, 0, 0))
+        kf_vec(s, "location", frame, tuple(centre))
+        kf_vec(s, "scale", frame, (1.4, 1.4, 1.4))
+        kf_vec(s, "location", frame + 22, tuple(end))
+        kf_vec(s, "scale", frame + 22, (0, 0, 0))
+
+
+# --------------------------------------------------------------------------
+# The film
+# --------------------------------------------------------------------------
 def animate_story(sc, orb, L, root):
+    add_face_rig(orb)
     c = Choreo(orb)
     o = orb
     o["root"].scale = (ORB_SCALE,) * 3
-    tl = o["tip_light"]
+    tip, tl = o["tip"], o["tip_light"]
     tl.energy = 25
-    floor_z = 0.0
 
-    # ---- 1. IDLE: antenna starts to twitch ---------------------------------
-    c.at(1, START_X, floor_z)
+    # ---- 1. IDLE: his antenna starts to twitch -------------------------------
+    c.at(1, START_X, 0)
     c.face(1, 0)
     c.squash(1, 1, 1)
     c.lean(1, 0)
     c.look(1, 0, 0)
-    c.eyes(1, 1, 1)
-    c.blink(14)
-    c.look(18, 0.08, 0.1)                      # glances up at the antenna
-    c.wobble([(1, 0), (20, 0), (23, 14), (25, -12), (27, 18), (29, -16), (31, 22)])
+    c.expr(1, eyes="open", brows="neutral")
+    c.blink(10)
+    c.look(16, 0.08, 0.11)                         # glances up at it
+    c.expr(18, brows="surprised")
+    c.wobble([(1, 0), (19, 0), (22, 14), (24, -12), (26, 18), (28, -16), (30, 22)])
 
-    # ---- 2. POP: the tip detaches and becomes the spark --------------------
-    tip = o["tip"]
+    # ---- 2. POP: the tip takes off and starts drawing the line --------------
     kf_vec(tip, "scale", 1, (1, 1, 1))
     kf_vec(tip, "scale", F_POP - 1, (1, 1, 1))
     kf_vec(tip, "scale", F_POP, (0, 0, 0))
     for f, e in ((1, 25), (F_POP - 1, 25), (F_POP, 0)):
         kf(tl, "energy", f, e)
     c.wobble([(F_POP, -30), (F_POP + 4, 20), (F_POP + 9, -10), (F_POP + 14, 0)])
-    c.eyes(F_POP + 2, 1.25, 1.25)               # wide-eyed surprise
-    c.look(F_POP + 4, 0.1, 0.12)
-    c.squash(F_POP + 2, 0.9, 1.15)
-    c.squash(F_POP + 8, 1.0, 1.0)
-    c.at(F_POP + 6, START_X - 0.15, 0.25)       # little startled jump back
-    c.at(F_POP + 12, START_X - 0.2, floor_z)
+    c.expr(F_POP + 1, eyes="wide", brows="surprised", mouth="o")
+    c.look(F_POP + 3, 0.1, 0.12)
+    c.hop(F_POP + 3, F_POP + 11, (START_X, 0), (START_X - 0.25, 0), height=0.3, crouch=2, feel=False)
 
     sc.frame_set(F_POP - 1)
-    tip_world = root.matrix_world.inverted() @ tip.matrix_world.translation
+    tip_pos = root.matrix_world.inverted() @ tip.matrix_world.translation
 
-    spark = sphere("Spark", 0.11, emission("Spark_Glow", AMBER, 30.0), root, tuple(tip_world), seg=24, rings=12)
+    spark = sphere("Spark", 0.11, emission("Spark_Glow", AMBER, 30.0), root, tuple(tip_pos), seg=24, rings=12)
     sl = bpy.data.lights.new("Spark_Light", "POINT")
     sl.color = hex_rgba(AMBER)[:3]
     sl.shadow_soft_size = 0.1
@@ -858,16 +999,15 @@ def animate_story(sc, orb, L, root):
     for f, e in ((1, 0), (F_POP - 1, 0), (F_POP, 150), (F_POP + 10, 80)):
         kf(sl, "energy", f, e)
 
-    # spark flight = the line chart; the trail follows it exactly
+    # The line chart. Every point is higher than the last: it only ever grows.
     above = 0.55
-    path = [(F_POP, tip_world),
-            (F_POP + 14, Vector((-6.4, 0, 2.4))),
-            (F_CHASE, Vector((-4.6, 0, 1.2))),
-            (F_CHASE + 22, Vector((BAR_X[0], 0, BAR_TOP[0] + above))),
-            (F_CLIMB + 10, Vector((BAR_X[1], 0, BAR_TOP[1] + above))),
-            (F_CLIMB + 28, Vector((BAR_X[2], 0, BAR_TOP[2] + above))),
-            (F_CLIMB + 46, Vector((BAR_X[3], 0, BAR_TOP[3] + above))),
-            (F_CLIMB + 80, Vector((DOT.x + 0.8, 0, DOT.z + 3.4)))]      # up and away, past the end of the chart
+    path = [(F_POP, tip_pos),
+            (F_POP + 14, Vector((-6.7, 0, 1.45))),
+            (F_CHASE, Vector((-5.0, 0, 1.75))),
+            (90, Vector((BAR_X[0], 0, BAR_TOP[0] + above))),
+            (110, Vector((BAR_X[1], 0, BAR_TOP[1] + above))),
+            (130, Vector((BAR_X[2], 0, BAR_TOP[2] + above))),
+            (150, Vector(BREAK_A))]
     trail = curve_obj("Spark_Trail", [tuple(p) for _, p in path], 0.05,
                       emission("Spark_Trail_Glow", AMBER, 12.0), parent=root)
     trail.data.bevel_factor_mapping_end = "SPLINE"
@@ -880,154 +1020,165 @@ def animate_story(sc, orb, L, root):
     for (f, p), d in zip(path, seg):
         kf_vec(spark, "location", f, tuple(p))
         kf(trail.data, "bevel_factor_end", f, d / seg[-1])
+    # then it draws the breakout line itself, slowly climbing out of reach
+    bo = L["breakout"].data
+    kf(bo, "bevel_factor_end", 1, 0.0)
+    for f, fr in SPARK_FRAC:
+        kf_vec(spark, "location", f, tuple(line_pt(fr) + Vector((0, 0, LINE_R))))
+        kf(bo, "bevel_factor_end", f, fr)
     linear_keys(False)
-    hover = path[-1][1]
-    for i, f in enumerate(range(path[-1][0] + 10, F_LEAP, 14)):        # it hovers out in the void
-        kf_vec(spark, "location", f, tuple(hover + Vector((0.1 * (-1) ** i, 0, 0.18 * (-1) ** i))))
 
-    # ---- 3. CHASE: waddle-hops across the floor -----------------------------
-    c.face(F_CHASE - 4, 0)
-    c.face(F_CHASE + 2, 55)                     # turn toward the run
-    c.eyes(F_CHASE, 1, 0.82)                    # determined squint
-    c.look(F_CHASE, 0.08, 0.04)
-    c.lean(F_CHASE + 2, 10)
-    xs = [START_X - 0.2, -7.2, -6.2, -5.2, -4.2, -3.3]
+    # bars grow out of the floor as the line passes over them
+    for i, (bar, f_over) in enumerate(zip(L["bars"], (90, 110, 130, 150))):
+        full = tuple(bar.scale)
+        f0 = f_over - 8
+        kf_vec(bar, "scale", 1, (0, 0, 0))
+        kf_vec(bar, "scale", f0 - 1, (0, 0, 0))
+        kf_vec(bar, "scale", f0, (full[0], full[1], 0.0))
+        kf_vec(bar, "scale", f0 + 8, (full[0], full[1], full[2] * 1.12))
+        kf_vec(bar, "scale", f0 + 13, (full[0], full[1], full[2] * 0.97))
+        kf_vec(bar, "scale", f0 + 17, full)
+
+    # ---- 3. CHASE: he runs after it --------------------------------------------
+    c.face(F_CHASE - 6, 0)
+    c.face(F_CHASE, 35)
+    c.expr(F_CHASE - 4, eyes="squint", brows="determined", mouth="flat")
+    c.look(F_CHASE, 0.09, 0.05)
+    xs = [START_X - 0.25, -7.3, -6.3, -5.3, -4.3, -3.35]
     for i in range(len(xs) - 1):
-        f0 = F_CHASE + 3 + i * 7
-        c.hop(f0, f0 + 7, (xs[i], 0), (xs[i + 1], 0), extra=0.22)
+        f0 = F_CHASE + 2 + i * 7
+        c.hop(f0, f0 + 7, (xs[i], 0), (xs[i + 1], 0), height=0.22, small=True)
+    c.at(F_CLIMB - 6, xs[-1], 0)
 
-    # ---- 4. CLIMB: bar to bar -----------------------------------------------
-    c.lean(F_CLIMB - 4, 0)
-    c.hop(F_CLIMB, F_CLIMB + 12, (xs[-1], 0), (BAR_X[0], BAR_TOP[0]), extra=0.9)
-    c.hop(F_CLIMB + 20, F_CLIMB + 32, (BAR_X[0], BAR_TOP[0]), (BAR_X[1], BAR_TOP[1]), extra=0.8)
-    c.hop(F_CLIMB + 40, F_CLIMB + 52, (BAR_X[1], BAR_TOP[1]), (BAR_X[2], BAR_TOP[2]), extra=0.8)
-    c.wobble([(F_CLIMB + 12, -15), (F_CLIMB + 16, 10), (F_CLIMB + 32, -15), (F_CLIMB + 36, 10), (F_CLIMB + 52, -12), (F_CLIMB + 58, 0)])
+    # ---- 4. CLIMB: he feels every jump ----------------------------------------
+    c.hop(F_CLIMB, F_CLIMB + 14, (xs[-1], 0), (BAR_X[0], BAR_TOP[0]), height=0.9)
+    c.look(F_CLIMB + 16, 0.09, 0.1)
+    c.hop(F_CLIMB + 22, F_CLIMB + 36, (BAR_X[0], BAR_TOP[0]), (BAR_X[1], BAR_TOP[1]), height=0.8)
+    c.hop(F_CLIMB + 44, F_CLIMB + 58, (BAR_X[1], BAR_TOP[1]), (BAR_X[2], BAR_TOP[2]), height=0.8)
+    c.expr(F_TEETER - 24, eyes="squint", brows="determined", mouth="flat")  # the big one, he psyches up
+    c.look(F_TEETER - 24, 0.1, 0.08)
 
-    # ---- 5. STUMBLE: the biggest step, he comes up short ---------------------
-    edge_x = LX(206) - ORB_SCALE - 0.04            # in the gap, just short of the amber bar
-    hang_z = BAR_TOP[3] - 0.9
-    c.at(F_STUMBLE, BAR_X[2], BAR_TOP[2])
-    c.squash(F_STUMBLE - 3, 1.15, 0.84)
-    c.at(F_STUMBLE + 7, (BAR_X[2] + edge_x) / 2, BAR_TOP[3] + 0.25)
-    c.at(F_STUMBLE + 13, edge_x, hang_z)        # slams into the side, hanging off the edge
-    c.squash(F_STUMBLE + 13, 0.85, 1.2)
-    c.eyes(F_STUMBLE + 9, 1.3, 1.3)
-    c.look(F_STUMBLE + 9, 0.0, 0.12)
-    for f, a in ((F_STUMBLE, 0), (F_STUMBLE + 13, -28), (F_STUMBLE + 18, -14), (F_STUMBLE + 23, -30),
-                 (F_STUMBLE + 28, -16), (F_STUMBLE + 33, -26)):
-        c.lean(f, a)                             # flailing
-    c.at(F_STUMBLE + 30, edge_x, hang_z + 0.12)
-    c.at(F_STUMBLE + 36, edge_x, hang_z)         # slips a little
-    # scramble up
-    c.at(F_STUMBLE + 42, edge_x + 0.15, BAR_TOP[3] - 0.15)
-    c.lean(F_STUMBLE + 42, -10)
-    c.at(F_STUMBLE + 48, BAR_X[3], BAR_TOP[3])
-    c.lean(F_STUMBLE + 48, 0)
-    c.squash(F_STUMBLE + 48, 1.15, 0.85)
-    c.squash(F_STUMBLE + 52, 1.0, 1.0)
-    c.eyes(F_STUMBLE + 46, 1, 1)
-    c.blink(F_EDGE - 6)
+    # ---- 5. TEETER: the biggest step, he lands right on the edge ----------------
+    edge_x = LX(206) + 0.1
+    c.hop(F_TEETER - 16, F_TEETER, (BAR_X[2], BAR_TOP[2]), (edge_x, BAR_TOP[3]), height=1.0, feel=False)
+    c.expr(F_TEETER - 14, eyes="wide", brows="surprised", mouth="o")
+    c.expr(F_TEETER + 1, eyes="wide", brows="worried", mouth="o")
+    c.look(F_TEETER + 2, -0.08, -0.1)              # looks down. long way down.
+    for f, a in ((F_TEETER, 0), (F_TEETER + 3, -24), (F_TEETER + 7, 14), (F_TEETER + 11, -20),
+                 (F_TEETER + 15, 10), (F_TEETER + 19, -12), (F_TEETER + 23, 0)):
+        c.lean(f, a)
+    c.wobble([(F_TEETER + 3, 30), (F_TEETER + 7, -26), (F_TEETER + 11, 24), (F_TEETER + 15, -14), (F_TEETER + 20, 0)])
+    c.expr(F_TEETER + 23, eyes="closed", brows="happy", mouth="flat")   # phew
+    c.squash(F_TEETER + 24, 1.12, 0.86)
+    c.squash(F_TEETER + 30, 1.0, 1.0)
+    c.at(F_TEETER + 30, edge_x, BAR_TOP[3])
+    c.expr(F_TEETER + 30, eyes="open", mouth="smile")
+    c.hop(F_TEETER + 32, F_TEETER + 38, (edge_x, BAR_TOP[3]), (BAR_X[3], BAR_TOP[3]), height=0.15, small=True)
 
-    # ---- 6. THE EDGE: the spark is out in the void ----------------------------
-    c.at(F_EDGE, BAR_X[3], BAR_TOP[3])
-    c.face(F_EDGE, 55)
-    c.face(F_EDGE + 12, 70)
-    c.look(F_EDGE + 8, 0.1, 0.1)
-    c.lean(F_EDGE + 10, 6)
-    c.lean(F_FORESIGHT - 8, 0)
-    c.face(F_FORESIGHT - 4, 70)
-    c.face(F_FORESIGHT + 6, 35)
+    # ---- 6. EDGE: the spark keeps climbing, out of reach ------------------------
+    c.look(F_EDGE, 0.1, 0.12)
+    c.face(F_EDGE, 35)
+    c.expr(F_EDGE + 4, eyes="open", brows="determined", mouth="flat")
+    c.hop(F_EDGE + 10, F_EDGE + 26, (BAR_X[3], BAR_TOP[3]), (BAR_X[3], BAR_TOP[3]), height=1.1, crouch=6, feel=False)
+    c.expr(F_EDGE + 12, eyes="wide", brows="determined", mouth="o")      # reaching...
+    c.expr(F_EDGE + 27, eyes="squint", brows="sad", mouth="flat")       # ...not even close
+    c.squash(F_EDGE + 30, 1.1, 0.88)                                    # slumps
+    c.lean(F_EDGE + 30, 8)
+    c.look(F_EDGE + 30, 0.0, -0.08)
+    c.squash(F_FORESIGHT - 4, 1.1, 0.88)
+    c.lean(F_FORESIGHT - 4, 8)
 
-    # ---- 7. FORESIGHT: eyes close, he glows, the forecast projects ------------
+    # ---- 7. FORESIGHT: he stops chasing and looks ahead -------------------------
     b = o["body_mat"].node_tree.nodes["Principled BSDF"]
     set_input(b, ["Emission Color", "Emission"], hex_rgba(LOGO_WHITE))
-    es = b.inputs["Emission Strength"]
-    bc = b.inputs["Base Color"]
+    es, bc = b.inputs["Emission Strength"], b.inputs["Base Color"]
     slate = bc.default_value[:]
-    for f, e in ((1, 0.0), (F_FORESIGHT, 0.0), (F_FORESIGHT + 22, 2.5), (F_LEAP + 4, 2.5), (F_CATCH, 1.0)):
+    for f, e in ((1, 0.0), (F_FORESIGHT, 0.0), (F_FORESIGHT + 18, 2.5), (F_LEAP, 2.0), (F_CATCH, 0.6)):
         kf_socket(es, f, e)
-    c.eyes(F_FORESIGHT + 2, 1, 1)
-    c.eyes(F_FORESIGHT + 8, 1.08, 0.07)
-    c.squash(F_FORESIGHT + 10, 1.0, 1.0)
-    c.squash(F_FORESIGHT + 24, 1.05, 1.05)        # a slow breath in
+    c.squash(F_FORESIGHT + 6, 1.0, 1.0)
+    c.lean(F_FORESIGHT + 6, 0)
+    c.squash(F_FORESIGHT + 22, 1.05, 1.06)        # a slow breath in
+    c.expr(F_FORESIGHT + 2, eyes="closed", brows="neutral", mouth="smile")
+    c.look(F_FORESIGHT + 2, 0, 0)
 
-    m_dash = emission("Forecast_Dash", AMBER, 8.0)
-    n = 11
+    m_dash = emission("Forecast_Dash", AMBER, 7.0)
     dashes = []
-    for i in range(n):
-        a = BREAK_A + (DOT - BREAK_A) * ((i + 0.15) / n)
-        e = BREAK_A + (DOT - BREAK_A) * ((i + 0.65) / n)
-        a.y = e.y = -0.05
-        d = cylinder_between(f"Forecast_Dash_{i:02d}", a, e, 0.06, m_dash, root)
-        f0 = F_FORESIGHT + 14 + i * 2
+    for i, fr in enumerate(DASH_FRACS):
+        a, e = line_pt(fr - 0.03), line_pt(fr + 0.03)
+        d = cylinder_between(f"Forecast_Dash_{i}", a, e, DASH_R, m_dash, root)
+        f0 = F_FORESIGHT + 8 + i * 3
         kf_vec(d, "scale", 1, (0, 0, 0))
         kf_vec(d, "scale", f0, (0, 0, 0))
-        kf_vec(d, "scale", f0 + 4, (1, 1, 1))
+        kf_vec(d, "scale", f0 + 3, (1.4, 1.4, 1.4))
+        kf_vec(d, "scale", f0 + 6, (1, 1, 1))
+        fs = int(frame_for_frac(fr))           # the solid line catches up and replaces it
+        kf_vec(d, "scale", fs - 1, (1, 1, 1))
+        kf_vec(d, "scale", fs + 2, (0, 0, 0))
         dashes.append(d)
-    ghost = curve_obj("Forecast_Target", circle_pts(0.45, 48, "XZ"), 0.025, m_dash, parent=root, cyclic=True)
-    ghost.location = tuple(DOT + Vector((0, -0.05, 0)))
-    for f, s_ in ((1, 0), (F_FORESIGHT + 36, 0), (F_FORESIGHT + 40, 1.2), (F_FORESIGHT + 46, 0.9),
-                  (F_FORESIGHT + 52, 1.1), (F_LEAP, 0.9), (F_CATCH, 0.9), (F_CATCH + 2, 0)):
-        kf_vec(ghost, "scale", f, (s_, s_, s_))
+    c.expr(F_LEAP - 8, eyes="squint", brows="determined", mouth="grin")   # he sees it
 
-    # ---- 8. LEAP OF FAITH ------------------------------------------------------
-    c.eyes(F_LEAP - 2, 1, 0.07)
-    c.eyes(F_LEAP + 2, 1, 0.85)
-    c.face(F_LEAP - 4, 35)
-    c.squash(F_LEAP - 4, 1.2, 0.75)               # crouch
-    c.at(F_LEAP, BAR_X[3], BAR_TOP[3])
-    catch_root = DOT - Vector((0, 0, ORB_CENTRE))
-    c.at(F_LEAP + 15, (BAR_X[3] + DOT.x) / 2 - 0.3, DOT.z + 1.0)
-    c.at(F_CATCH, catch_root.x, catch_root.z)
-    c.squash(F_LEAP + 3, 0.82, 1.25)
-    c.squash(F_LEAP + 14, 1.0, 1.0)
-    c.face(F_CATCH - 4, 0)                        # turns to camera as he arrives
-    c.look(F_LEAP + 4, 0.1, 0.06)
-    c.look(F_CATCH - 2, 0, 0)
+    # ---- 8. OUTRUN THE LINE: hop along the forecast -------------------------------
+    stand = lambda fr: (line_pt(fr).x, line_pt(fr).z + DASH_R)
+    c.face(F_LEAP - 6, 30)
+    c.hop(F_LEAP, F_LEAP + 14, (BAR_X[3], BAR_TOP[3]), stand(0.62), height=1.0, crouch=6)   # right over the spark
+    c.hop(F_LEAP + 18, F_LEAP + 26, stand(0.62), stand(0.80), height=0.45, crouch=3)
+    c.hop(F_LEAP + 30, F_LEAP + 38, stand(0.80), stand(0.98), height=0.45, crouch=3)
+    end = stand(0.98)
+    c.face(F_LEAP + 40, 30)
+    c.face(F_LEAP + 44, -55)                       # turns round to wait for it
+    c.expr(F_LEAP + 46, eyes="wide", brows="happy", mouth="grin")
+    c.look(F_LEAP + 46, 0.1, -0.06)
+    for k in range(3):                             # can't stand still
+        f = F_LEAP + 44 + k * 2
+        c.squash(f, 1.08, 0.92 if k % 2 else 1.06)
+    c.squash(F_CATCH - 1, 1.0, 1.0)
+    c.at(F_CATCH - 1, *end)
 
+    # ---- 9. THE CATCH (and pure joy) ----------------------------------------------
     sc.frame_set(F_CATCH)
     tip_at_catch = root.matrix_world.inverted() @ tip.matrix_world.translation
-    kf_vec(spark, "location", F_LEAP, tuple(hover))
-    kf_vec(spark, "location", F_LEAP + 16, tuple(hover + Vector((0.4, 0, 0.6))))
+    linear_keys(True)
     kf_vec(spark, "location", F_CATCH, tuple(tip_at_catch))
+    kf(bo, "bevel_factor_end", F_CATCH, 1.0)
+    linear_keys(False)
     kf_vec(spark, "scale", F_CATCH, (1, 1, 1))
     kf_vec(spark, "scale", F_CATCH + 1, (0, 0, 0))
     kf(sl, "energy", F_CATCH, 80)
     kf(sl, "energy", F_CATCH + 1, 0)
-
-    # ---- 9. THE CATCH ------------------------------------------------------------
     kf_vec(tip, "scale", F_CATCH, (0, 0, 0))
     kf_vec(tip, "scale", F_CATCH + 1, (1.8, 1.8, 1.8))
     kf_vec(tip, "scale", F_CATCH + 8, (1, 1, 1))
     tip_strength = o["tip_mat"].node_tree.nodes["Emission"].inputs["Strength"]
-    for f, e in ((1, 12), (F_CATCH, 12), (F_CATCH + 1, 80), (F_CATCH + 14, 12)):
+    for f, e in ((1, 12), (F_CATCH, 12), (F_CATCH + 1, 80), (F_CATCH + 16, 12)):
         kf_socket(tip_strength, f, e)
-    for f, e in ((F_CATCH, 0), (F_CATCH + 1, 600), (F_CATCH + 16, 25)):
+    for f, e in ((F_CATCH, 0), (F_CATCH + 1, 600), (F_CATCH + 18, 25)):
         kf(tl, "energy", f, e)
-    c.eyes(F_CATCH + 2, 1.08, 0.07)               # happy closed eyes
-    c.squash(F_CATCH + 1, 1.25, 0.8)
-    c.squash(F_CATCH + 7, 0.95, 1.06)
-    c.squash(F_CATCH + 12, 1.0, 1.0)
-    c.wobble([(F_CATCH, 0), (F_CATCH + 3, 25), (F_CATCH + 7, -15), (F_CATCH + 11, 6), (F_CATCH + 15, 0)])
-    for i, f in enumerate(range(F_CATCH + 14, F_MELT, 16)):                  # floats, gently bobbing
-        c.at(f, catch_root.x, catch_root.z + (0.08 if i % 2 else 0.0))
-    ring_shockwave("Catch_Shockwave", tuple(DOT + Vector((0, -0.1, 0))), F_CATCH + 1, 7.0, root)
+    sparkle_burst("Joy_Sparkle", tip_at_catch, F_CATCH + 1, root)
 
-    # forecast dashes become the solid breakout line
-    for i, d in enumerate(dashes):
-        f0 = F_CATCH + 2 + i
-        kf_vec(d, "scale", f0, (1, 1, 1))
-        kf_vec(d, "scale", f0 + 4, (0, 0, 0))
-    bo = L["breakout"].data
-    kf(bo, "bevel_factor_end", 1, 0.0)
-    kf(bo, "bevel_factor_end", F_CATCH + 2, 0.0)
-    kf(bo, "bevel_factor_end", F_CATCH + 14, 1.0)
-    # the chase trail has done its job: it retracts
+    blush = o["blush_mat"].node_tree.nodes["Principled BSDF"].inputs["Emission Strength"]
+    for f, e in ((1, 0.4), (F_CATCH, 0.4), (F_CATCH + 3, 3.0), (F_CATCH + 40, 1.2)):
+        kf_socket(blush, f, e)
+    c.expr(F_CATCH + 1, eyes="happy", brows="happy", mouth="grin")
+    c.squash(F_CATCH + 1, 1.3, 0.72)
+    c.squash(F_CATCH + 5, 1.0, 1.0)
+    c.face(F_CATCH + 3, -55)
+    c.face(F_CATCH + 6, 0)
+    # a spinning jump for joy, then a happy little bounce
+    c.hop(F_CATCH + 10, F_CATCH + 26, end, end, height=0.9, crouch=3, feel=False)
+    c.face(F_CATCH + 10, 0)
+    c.face(F_CATCH + 26, 360)
+    c.hop(F_CATCH + 30, F_CATCH + 40, end, end, height=0.4, crouch=3, feel=False)
+    c.wobble([(F_CATCH + 2, 28), (F_CATCH + 6, -20), (F_CATCH + 10, 14), (F_CATCH + 27, -22), (F_CATCH + 32, 16), (F_CATCH + 40, -8), (F_CATCH + 46, 0)])
+    c.expr(F_CATCH + 48, eyes="open", brows="happy", mouth="smile")
+    c.look(F_CATCH + 48, 0, 0)
+    c.blink(F_CATCH + 70)
+
+    # the chase line has done its job: it retracts, leaving only the breakout line
     kf(trail.data, "bevel_factor_start", 1, 0.0)
-    kf(trail.data, "bevel_factor_start", F_CATCH + 6, 0.0)
-    kf(trail.data, "bevel_factor_start", F_CATCH + 30, 1.0)
+    kf(trail.data, "bevel_factor_start", F_CATCH + 30, 0.0)
+    kf(trail.data, "bevel_factor_start", F_REVEAL, 1.0)
 
-    # ---- 10. THE REVEAL: the scene was the logo ---------------------------------
+    # ---- 10. THE REVEAL: the scene was the logo -------------------------------------
     for key, gap, f0, f1 in (("ring", L["gap_outer"], F_REVEAL + 4, F_REVEAL + 40),
                              ("inner", L["gap_inner"], F_REVEAL + 16, F_REVEAL + 46)):
         d = L[key].data
@@ -1041,10 +1192,8 @@ def animate_story(sc, orb, L, root):
         kf(d, "bevel_factor_end", 1, 0.0)
         kf(d, "bevel_factor_end", f0, 0.0)
         kf(d, "bevel_factor_end", f1, 1.0)
-    # the whole thing rises out of the floor, V stand and groundline emerging beneath it
     kf(root, "location", F_REVEAL + 6, 0.0, index=2)
     kf(root, "location", F_REVEAL + 60, LOGO_LIFT, index=2)
-    # data-blue bars turn brand-white
     for m in L["bar_mats"]:
         bsdf = m.node_tree.nodes["Principled BSDF"]
         for name in ("Base Color", "Emission Color"):
@@ -1058,20 +1207,25 @@ def animate_story(sc, orb, L, root):
     ws = L["white"].node_tree.nodes["Principled BSDF"].inputs["Emission Strength"]
     for f, e in ((1, 1.6), (F_REVEAL + 40, 1.6), (F_REVEAL + 44, 6.0), (F_REVEAL + 58, 1.6)):
         kf_socket(ws, f, e)
+    c.look(F_REVEAL + 10, -0.1, -0.1)              # he looks down at what he drew
+    c.expr(F_REVEAL + 10, eyes="wide", brows="surprised", mouth="o")
+    c.expr(F_REVEAL + 40, eyes="happy", brows="happy", mouth="grin")
 
-    # ---- 11. MELT INTO THE MARK -------------------------------------------------------
+    # ---- 11. MELT INTO THE MARK --------------------------------------------------------
     kf_socket(bc, F_MELT, slate)
     kf_socket(bc, F_MELT + 12, hex_rgba(LOGO_WHITE))
-    kf_socket(es, F_MELT, 1.0)
+    kf_socket(es, F_MELT, 0.6)
     kf_socket(es, F_MELT + 12, 8.0)
+    c.expr(F_MELT, eyes="happy", brows="happy", mouth="smile")
     for f, s_ in ((F_MELT, 1.0), (F_MELT + 10, 0.85), (F_MELT + 20, 0.4), (F_MELT + 26, 0.0)):
         s = ORB_SCALE * s_
         kf_vec(o["root"], "scale", f, (s, s, s))
-        c.at(f, DOT.x, DOT.z - ORB_CENTRE * s_)      # shrink about his body centre (= the dot)
+        cx_ = DOT.x + (end[0] - DOT.x) * s_                      # body centre slides into the dot
+        cz_ = DOT.z + (end[1] + ORB_CENTRE - DOT.z) * s_
+        c.at(f, cx_, cz_ - ORB_CENTRE * s_)
     dot = L["dot"]
     for f, s_ in ((1, 0), (F_MELT + 14, 0), (F_MELT + 26, 1.25), (F_MELT + 32, 1.0)):
         kf_vec(dot, "scale", f, (s_, s_, s_))
-    ring_shockwave("Melt_Shockwave", tuple(DOT + Vector((0, -0.1, 0))), F_MELT + 26, 4.0, root)
 
     # ---- 12. TITLE --------------------------------------------------------------------
     for i, ob in enumerate(L["letters"]):
@@ -1109,36 +1263,38 @@ def build_story_camera(sc):
     con.track_axis = "TRACK_NEGATIVE_Z"
     con.up_axis = "UP_Y"
 
-    # final framing: whole lockup + tagline, front-on
     top = LZ(53) + LOGO_LIFT
     bottom = LZ(221) - (46 / 2.25) * S_LOGO - (MICHROMA_CAP / MICHROMA_UPM) * (40 / 2.25) * S_LOGO + LOGO_LIFT - (2.3 if TAGLINE else 0)
     centre_z = (top + bottom) / 2
     dist = ((top - bottom) / 0.62 / 2) / math.tan(math.atan(10.125 / 40))
     cx = LX(195.5)
+    dz = DOT.z + LOGO_LIFT
 
-    shots = [  # frame, camera location, target location
+    shots = [  # frame, camera, target
         (1, (START_X + 1.4, -6.5, 1.3), (START_X, 0, 0.6)),
-        (F_POP - 2, (START_X + 1.0, -5.2, 1.1), (START_X, 0, 0.7)),
-        (F_POP + 10, (START_X + 1.0, -6.0, 1.8), (-6.6, 0, 2.0)),          # whip toward the spark
-        (F_POP + 22, (START_X + 1.0, -6.0, 1.4), (START_X, 0, 0.6)),       # snap back to Orb
-        (F_CHASE + 10, (-6.5, -7.0, 1.6), (-6.4, 0, 0.8)),                 # side-on tracking
-        (F_CLIMB, (-3.6, -8.0, 2.0), (-3.0, 0, 1.2)),
-        (F_CLIMB + 30, (-1.5, -8.5, 3.0), (-1.0, 0, 2.4)),                  # crane up with the climb
-        (F_STUMBLE, (0.2, -7.5, 3.6), (0.6, 0, 3.1)),
-        (F_STUMBLE + 16, (1.0, -5.0, 3.4), (1.2, 0, 3.0)),                  # tight on the stumble
-        (F_EDGE - 6, (1.2, -5.5, 3.9), (1.6, 0, 3.8)),
-        (F_EDGE + 24, (3.5, -15.0, 5.2), (4.0, 0, 4.6)),                    # wide: tiny Orb, huge void
-        (F_FORESIGHT + 6, (3.0, -12.0, 4.8), (3.6, 0, 4.6)),
-        (F_LEAP - 4, (2.4, -7.5, 4.4), (2.6, 0, 4.4)),                      # slow push-in on the glow
-        (F_LEAP + 14, (3.8, -8.5, 5.4), (4.3, 0, 5.2)),                     # arc with the leap
-        (F_CATCH, (5.4, -6.5, 5.4), (5.6, 0, 5.2)),
-        (F_REVEAL, (5.5, -5.6, 5.3), (5.6, 0, 5.2)),                        # hold on the catch
-        (F_REVEAL + 30, (3.0, -24.0, 8.0), (2.0, 0, 6.0)),                  # fast pull-back
-        (F_REVEAL + 64, (cx, -dist * 0.95, centre_z), (cx, 0, centre_z)),
+        (F_POP - 4, (START_X + 1.0, -5.2, 1.1), (START_X, 0, 0.7)),
+        (F_POP + 12, (START_X + 1.2, -6.2, 1.7), (-6.6, 0, 1.5)),       # follow the spark
+        (F_CHASE - 2, (START_X + 1.4, -6.4, 1.5), (-6.2, 0, 1.0)),
+        (F_CHASE + 22, (-5.6, -7.2, 1.6), (-5.2, 0, 1.0)),              # side-on tracking
+        (F_CLIMB, (-3.6, -8.0, 2.0), (-3.0, 0, 1.4)),
+        (F_CLIMB + 40, (-1.2, -8.2, 3.0), (-0.6, 0, 2.6)),              # crane up with the climb
+        (F_TEETER - 12, (0.6, -7.0, 3.8), (1.0, 0, 3.6)),
+        (F_TEETER + 4, (1.2, -4.8, 4.0), (1.4, 0, 3.9)),                # tight on the teeter
+        (F_EDGE - 4, (1.6, -5.4, 4.3), (1.9, 0, 4.1)),
+        (F_EDGE + 26, (2.6, -9.0, 4.8), (2.8, 0, 4.4)),
+        (F_FORESIGHT, (3.0, -12.5, 5.2), (3.4, 0, 4.6)),                # wide: small Orb, line out of reach
+        (F_LEAP - 6, (2.6, -8.0, 4.7), (2.9, 0, 4.6)),                  # push in on the glow
+        (F_LEAP + 16, (3.8, -8.5, 5.3), (4.1, 0, 5.0)),                 # track the hops
+        (F_LEAP + 40, (5.0, -7.2, 5.6), (5.2, 0, 5.3)),
+        (F_CATCH, (5.2, -6.0, 5.7), (5.4, 0, 5.5)),                     # the catch, close
+        (F_CATCH + 30, (5.3, -6.4, 5.8), (5.5, 0, 5.7)),
+        (F_REVEAL, (5.0, -7.0, 5.8), (5.2, 0, 5.6)),
+        (F_REVEAL + 30, (3.0, -24.0, 8.0), (2.0, 0, 6.0)),              # fast pull-back
+        (F_REVEAL + 62, (cx, -dist * 0.95, centre_z), (cx, 0, centre_z)),
         (F_MELT, (cx, -dist * 0.9, centre_z), (cx, 0, centre_z)),
-        (F_MELT + 8, (DOT.x - 0.5, -dist * 0.4, DOT.z + LOGO_LIFT), (DOT.x - 0.5, 0, DOT.z + LOGO_LIFT)),   # close on the melt
-        (F_MELT + 30, (DOT.x - 1.0, -dist * 0.45, DOT.z + LOGO_LIFT - 0.5), (DOT.x - 1.0, 0, DOT.z + LOGO_LIFT - 0.5)),
-        (F_TITLE + 10, (cx, -dist, centre_z), (cx, 0, centre_z)),           # end card
+        (F_MELT + 10, (DOT.x - 0.5, -dist * 0.4, dz), (DOT.x - 0.5, 0, dz)),   # close on the melt
+        (F_MELT + 28, (DOT.x - 1.0, -dist * 0.45, dz - 0.5), (DOT.x - 1.0, 0, dz - 0.5)),
+        (F_TITLE + 10, (cx, -dist, centre_z), (cx, 0, centre_z)),       # end card
         (FRAME_END, (cx, -dist * 0.97, centre_z), (cx, 0, centre_z)),
     ]
     for f, loc, tgt in shots:
@@ -1156,9 +1312,8 @@ def build_story_camera(sc):
 def main():
     sc = reset_scene()
     render_settings(sc)
-    for attr, val in (("volumetric_end", 160.0),):
-        if hasattr(sc.eevee, attr):
-            setattr(sc.eevee, attr, val)
+    if hasattr(sc.eevee, "volumetric_end"):
+        sc.eevee.volumetric_end = 160.0
     build_world(sc)
     floor, grid_strength = build_stage()
     shaft = build_lights()
@@ -1170,18 +1325,15 @@ def main():
     animate_story(sc, orb, L, root)
     build_story_camera(sc)
 
-    # thin the haze for the long end-card shot
     vol = sc.world.node_tree.nodes.get("Principled Volume")
     if vol:
         d = vol.inputs["Density"]
         kf_socket(d, 1, 0.018)
         kf_socket(d, F_REVEAL, 0.018)
         kf_socket(d, F_REVEAL + 40, 0.004)
-    # grid pulses on the big beats, then calms for the end card
     for f, v in ((1, 0.6), (F_CATCH, 0.6), (F_CATCH + 2, 3.0), (F_CATCH + 30, 0.8),
                  (F_REVEAL + 44, 2.5), (F_REVEAL + 70, 0.6), (FRAME_END, 0.5)):
         kf_socket(grid_strength.inputs[1], f, v)
-    # god-ray spotlight swells for the finale
     shaft.location = (1.5, 8.0, 26.0)
     for f, e in ((1, 6000), (F_REVEAL, 6000), (F_REVEAL + 50, 40000), (FRAME_END, 30000)):
         kf(shaft.data, "energy", f, e)
